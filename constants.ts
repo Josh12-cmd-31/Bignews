@@ -1,4 +1,5 @@
-import { Article, Category } from './types';
+
+import { Article, Category, Video } from './types';
 
 export const CATEGORIES: Category[] = [
   'For You',
@@ -8,6 +9,35 @@ export const CATEGORIES: Category[] = [
   'Business',
   'Science',
   'Entertainment',
+  'Videos'
+];
+
+export const MOCK_VIDEOS: Video[] = [
+  {
+    id: 'v1',
+    title: 'Top 5 Tech Gadgets of 2024',
+    type: 'youtube',
+    url: 'dQw4w9WgXcQ', // Placeholder ID
+    views: 15400,
+    likes: 1200
+  },
+  {
+    id: 'v2',
+    title: 'Amazing Drone Footage of Nature',
+    type: 'upload',
+    url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+    thumbnail: 'https://picsum.photos/400/700?random=20',
+    views: 8900,
+    likes: 540
+  },
+  {
+    id: 'v3',
+    title: 'Quick Recipe: 5 Minute Pasta',
+    type: 'youtube',
+    url: 'M7lc1UVf-VE', // Placeholder ID
+    views: 32000,
+    likes: 4500
+  }
 ];
 
 export const MOCK_ARTICLES: Article[] = [
@@ -27,8 +57,13 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Quantum Physics', 'Innovation', 'Future Tech'],
     views: 12500,
     likes: 840,
-    comments: 124,
+    comments: 2,
+    userComments: [
+      { id: 'c1', user: 'TechEnthusiast', text: 'This is incredible news for the industry!', date: new Date(Date.now() - 80000000).toISOString() },
+      { id: 'c2', user: 'DevOps_Dan', text: 'I wonder how this handles error correction rates?', date: new Date(Date.now() - 70000000).toISOString() }
+    ],
     isBreaking: false,
+    linkedVideoId: 'v1'
   },
   {
     id: '2',
@@ -46,7 +81,10 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Japan', 'Travel', 'Street Food', 'Culinary'],
     views: 8900,
     likes: 1205,
-    comments: 89,
+    comments: 1,
+    userComments: [
+       { id: 'c3', user: 'TravelBug', text: 'Takoyaki is my absolute favorite!', date: new Date(Date.now() - 100000000).toISOString() }
+    ],
     isBreaking: false,
   },
   {
@@ -64,7 +102,8 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Football', 'Championship', 'Victory', 'Sports'],
     views: 45000,
     likes: 3200,
-    comments: 542,
+    comments: 0,
+    userComments: [],
     isBreaking: true,
   },
   {
@@ -79,7 +118,8 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Space', 'Mars', 'Future'],
     views: 15000,
     likes: 900,
-    comments: 230,
+    comments: 0,
+    userComments: [],
     isBreaking: false,
   },
   {
@@ -94,7 +134,8 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Finance', 'Stock Market', 'Economy'],
     views: 8000,
     likes: 450,
-    comments: 67,
+    comments: 0,
+    userComments: [],
     isBreaking: false,
   },
   {
@@ -109,7 +150,8 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Movies', 'Hollywood', 'Review'],
     views: 22000,
     likes: 1500,
-    comments: 312,
+    comments: 0,
+    userComments: [],
     isBreaking: false,
   },
   {
@@ -124,7 +166,8 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Baking', 'Recipes', 'Sourdough'],
     views: 5600,
     likes: 300,
-    comments: 45,
+    comments: 0,
+    userComments: [],
     isBreaking: false,
   },
   {
@@ -139,7 +182,8 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['EV', 'Cars', 'Green Energy'],
     views: 34000,
     likes: 2100,
-    comments: 410,
+    comments: 0,
+    userComments: [],
     isBreaking: false,
   },
   {
@@ -154,7 +198,8 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Charity', 'Community', 'Sports'],
     views: 4200,
     likes: 800,
-    comments: 56,
+    comments: 0,
+    userComments: [],
     isBreaking: false,
   },
   {
@@ -169,7 +214,8 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Health', 'Mental Health', 'Tech'],
     views: 11000,
     likes: 670,
-    comments: 98,
+    comments: 0,
+    userComments: [],
     isBreaking: false,
   },
   {
@@ -184,7 +230,8 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Startups', 'Investing', 'Money'],
     views: 19500,
     likes: 890,
-    comments: 145,
+    comments: 0,
+    userComments: [],
     isBreaking: false,
   },
   {
@@ -199,7 +246,8 @@ export const MOCK_ARTICLES: Article[] = [
     tags: ['Travel', 'Italy', 'Europe'],
     views: 7800,
     likes: 540,
-    comments: 82,
+    comments: 0,
+    userComments: [],
     isBreaking: false,
   }
 ];

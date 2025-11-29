@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Article, UserPreferences } from '../types';
-import { X, Clock, User, Tag, Hash, Link, Check, Share2, Mail } from 'lucide-react';
+
+import React, { useState, useEffect } from 'react';
+import { Article, UserPreferences, Comment, MonetizationConfig, Video } from '../types';
+import { X, Clock, User, Tag, Hash, Link, Check, Share2, Mail, Heart, MessageSquare, Send, Play, Film, ExternalLink } from 'lucide-react';
+import AdUnit from './AdUnit';
 
 // Inline SVG components for brand icons to ensure stability
 const TwitterIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
@@ -43,20 +45,42 @@ interface ArticleModalProps {
   article: Article | null;
   onClose: () => void;
   preferences: UserPreferences;
+  onUpdateArticle: (article: Article) => void;
+  monetization?: MonetizationConfig;
+  videos?: Video[];
 }
 
-const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferences }) => {
+const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferences, onUpdateArticle, monetization, videos }) => {
   const [copied, setCopied] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [isLiked, setIsLiked] = useState(false); // Simple session-based like state
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+
+  // Reset video state when article changes
+  useEffect(() => {
+    setIsPlayingVideo(false);
+  }, [article]);
+
+  // Lock scroll on mobile when modal is open
+  useEffect(() => {
+    if (article) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [article]);
 
   if (!article) return null;
 
   const isDark = preferences.theme === 'dark';
+  const linkedVideo = videos?.find(v => v.id === article.linkedVideoId);
 
   // Font size mapping
   const contentFontSizeClass = {
-    small: 'prose-base',
-    medium: 'prose-lg',
-    large: 'prose-xl'
+    small: 'prose-sm sm:prose-base',
+    medium: 'prose-base sm:prose-lg',
+    large: 'prose-lg sm:prose-xl'
   }[preferences.fontSize];
 
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/#article=${article.id}` : '';
@@ -66,6 +90,37 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleLike = () => {
+    if (isLiked) return; // Prevent multiple likes in one session for demo simplicity
+    setIsLiked(true);
+    onUpdateArticle({
+      ...article,
+      likes: (article.likes || 0) + 1
+    });
+  };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+
+    const comment: Comment = {
+      id: Date.now().toString(),
+      user: 'Guest User', // Hardcoded for guest mode
+      text: newComment.trim(),
+      date: new Date().toISOString()
+    };
+
+    const updatedComments = [...(article.userComments || []), comment];
+
+    onUpdateArticle({
+      ...article,
+      comments: updatedComments.length,
+      userComments: updatedComments
+    });
+
+    setNewComment('');
   };
 
   const socialLinks = [
@@ -108,59 +163,100 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div 
-        className={`w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl animate-in fade-in zoom-in duration-200 ${isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`}
+        className={`w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[90vh] overflow-y-auto sm:rounded-xl shadow-2xl animate-in fade-in zoom-in duration-200 ${isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative w-full aspect-video md:aspect-[21/9] group overflow-hidden">
-          <img 
-            src={article.imageUrl} 
-            alt={article.title} 
-            className="w-full h-full object-cover object-center"
-          />
-          
-          {/* Watermark - unobtrusive */}
-          <div className="absolute top-6 left-6 opacity-30 pointer-events-none z-10">
-             <span className="text-xl md:text-2xl font-black text-white font-serif tracking-widest drop-shadow-lg border-b-2 border-white/20 pb-1">BIG NEWS</span>
-          </div>
+        <div className="relative w-full aspect-video md:aspect-[21/9] group bg-black">
+          {isPlayingVideo && linkedVideo ? (
+             <div className="w-full h-full flex items-center justify-center">
+                {linkedVideo.type === 'youtube' ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${linkedVideo.url}?autoplay=1&rel=0`}
+                    title={linkedVideo.title}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                ) : (
+                  <video 
+                    src={linkedVideo.url} 
+                    className="w-full h-full object-contain" 
+                    controls 
+                    autoPlay
+                  />
+                )}
+             </div>
+          ) : (
+            <>
+              <img 
+                src={article.imageUrl} 
+                alt={article.title} 
+                className="w-full h-full object-cover object-center"
+              />
+              
+              {/* Play Button Overlay if video linked */}
+              {linkedVideo && (
+                <div 
+                  className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer group-hover:bg-black/30 transition-colors"
+                  onClick={() => setIsPlayingVideo(true)}
+                >
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border-2 border-white/50 group-hover:scale-110 transition-transform duration-300">
+                    <Play size={32} className="text-white ml-1" fill="white" />
+                  </div>
+                  <div className="absolute bottom-4 left-4 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1">
+                    <Film size={12} />
+                    Watch Video
+                  </div>
+                </div>
+              )}
+
+              {/* Watermark - unobtrusive */}
+              <div className="absolute top-6 left-6 opacity-20 pointer-events-none z-10">
+                <span className="text-xl md:text-2xl font-black text-white font-serif tracking-widest drop-shadow-lg border-b-2 border-white/20 pb-1">BIG NEWS</span>
+              </div>
+
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 sm:p-6 pt-20 pointer-events-none">
+                <span className="inline-block px-3 py-1 bg-blue-600 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-full mb-2 sm:mb-3 shadow-sm">
+                  {article.category}
+                </span>
+                <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-white font-serif leading-tight shadow-sm line-clamp-2">
+                  {article.title}
+                </h2>
+              </div>
+            </>
+          )}
 
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors z-20"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full transition-colors z-20 backdrop-blur-sm"
+            aria-label="Close article"
           >
             <X size={24} />
           </button>
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6 pt-20">
-             <span className="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-bold uppercase tracking-wider rounded-full mb-3 shadow-sm">
-              {article.category}
-            </span>
-            <h2 className="text-2xl md:text-4xl font-bold text-white font-serif leading-tight shadow-sm">
-              {article.title}
-            </h2>
-          </div>
         </div>
 
-        <div className="p-6 md:p-10">
+        <div className="p-4 sm:p-8 md:p-10">
           {/* Metadata & Share Row */}
-          <div className={`flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b pb-6 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
-            <div className={`flex flex-wrap items-center gap-4 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <div className={`flex flex-col gap-6 mb-8 border-b pb-6 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+            <div className={`flex flex-wrap items-center gap-3 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               <div className="flex items-center space-x-2">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>
                   <User size={16} />
                 </div>
                 <span className={`font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{article.author}</span>
               </div>
-              <div className={`hidden sm:block w-1 h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`}></div>
+              <div className="w-1 h-1 rounded-full bg-slate-300"></div>
               <div className="flex items-center space-x-1.5">
                 <Clock size={16} />
                 <span>
-                  Published on {new Date(article.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })} at {new Date(article.publishedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(article.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                 </span>
               </div>
               {article.isAiGenerated && (
                 <>
-                  <div className={`hidden sm:block w-1 h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`}></div>
+                  <div className="w-1 h-1 rounded-full bg-slate-300"></div>
                   <div className={`flex items-center space-x-1.5 font-medium px-2 py-0.5 rounded-full ${isDark ? 'text-purple-400 bg-purple-900/30' : 'text-purple-600 bg-purple-50'}`}>
                     <Tag size={14} />
                     <span>AI Generated</span>
@@ -171,6 +267,30 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
 
             {/* Share Buttons */}
             <div className="flex flex-wrap items-center gap-2">
+              {/* Watch Video Button in Toolbar if not playing */}
+              {linkedVideo && !isPlayingVideo && (
+                 <button 
+                    onClick={() => setIsPlayingVideo(true)}
+                    className="flex items-center gap-1 mr-4 text-xs font-bold uppercase tracking-wider text-red-600 hover:text-red-700 transition-colors"
+                 >
+                    <Play size={14} fill="currentColor" />
+                    Watch Video
+                 </button>
+              )}
+              
+              {/* External Source Link */}
+              {article.sourceUrl && (
+                <a 
+                   href={article.sourceUrl}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className={`flex items-center gap-1 mr-4 text-xs font-bold uppercase tracking-wider transition-colors ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
+                >
+                   <ExternalLink size={14} />
+                   Read Original Source
+                </a>
+              )}
+
               <div className={`flex items-center mr-2 text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <Share2 size={14} className="mr-1" />
                 Share
@@ -178,7 +298,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
               
               <button
                 onClick={handleCopyLink}
-                className={`p-2 rounded-full transition-all duration-200 border ${
+                className={`p-2.5 rounded-full transition-all duration-200 border ${
                     copied 
                     ? 'bg-green-50 border-green-200 text-green-600' 
                     : isDark 
@@ -192,22 +312,24 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
 
               <div className={`w-px h-6 mx-1 ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`}></div>
 
-              {socialLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`p-2 rounded-full transition-colors duration-200 border border-transparent ${
-                      isDark 
-                        ? 'text-slate-500 hover:border-slate-700' 
-                        : 'text-slate-400 hover:border-slate-200'
-                    } ${link.color}`}
-                  title={`Share on ${link.name}`}
-                >
-                  {link.icon}
-                </a>
-              ))}
+              <div className="flex flex-wrap gap-2">
+                {socialLinks.map((link) => (
+                  <a
+                    key={link.name}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`p-2.5 rounded-full transition-colors duration-200 border border-transparent ${
+                        isDark 
+                          ? 'text-slate-500 hover:border-slate-700' 
+                          : 'text-slate-400 hover:border-slate-200'
+                      } ${link.color}`}
+                    title={`Share on ${link.name}`}
+                  >
+                    {link.icon}
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -215,9 +337,20 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
             className={`prose max-w-none font-serif leading-relaxed ${contentFontSizeClass} ${isDark ? 'prose-invert prose-p:text-slate-300 prose-headings:text-slate-100' : 'text-slate-800'}`}
             dangerouslySetInnerHTML={{ __html: article.content }}
           />
+          
+          {/* Article Ad Unit */}
+          {monetization && (monetization.adsenseEnabled || monetization.monetagEnabled) && (
+            <div className="my-8">
+               <AdUnit 
+                  type={monetization.monetagEnabled ? 'monetag' : 'adsense'} 
+                  id={monetization.monetagEnabled ? monetization.monetagId : monetization.adsenseId}
+                  preferences={preferences}
+               />
+            </div>
+          )}
 
           {article.tags && article.tags.length > 0 && (
-            <div className={`mt-12 pt-8 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+            <div className={`mt-8 pt-6 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
               <div className={`flex items-center text-xs font-bold uppercase tracking-wider mb-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <Tag size={14} className="mr-2" />
                 Related Topics
@@ -239,6 +372,84 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
               </div>
             </div>
           )}
+
+          {/* Engagement Section */}
+          <div className={`mt-10 pt-8 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <h3 className={`text-xl font-bold font-serif mb-6 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Reactions</h3>
+            
+            {/* Like Button */}
+            <div className="flex items-center gap-4 mb-8">
+               <button
+                  onClick={handleLike}
+                  disabled={isLiked}
+                  className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all duration-300 border active:scale-95 ${
+                     isLiked 
+                       ? 'bg-rose-50 border-rose-200 text-rose-600' 
+                       : isDark 
+                          ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-rose-400 hover:border-rose-400/50' 
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'
+                  }`}
+               >
+                 <Heart size={24} className={isLiked ? 'fill-current animate-bounce' : ''} />
+                 <span className="font-semibold text-lg">{article.likes?.toLocaleString()}</span>
+                 <span className="text-sm opacity-80">{isLiked ? 'Liked' : 'Like'}</span>
+               </button>
+            </div>
+
+            {/* Comments Section */}
+            <div className={`rounded-xl p-4 sm:p-6 ${isDark ? 'bg-slate-800/50' : 'bg-slate-50'}`}>
+               <h4 className={`text-lg font-bold mb-6 flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                 <MessageSquare size={20} />
+                 Comments ({article.userComments?.length || 0})
+               </h4>
+
+               <div className="space-y-6 mb-8">
+                  {article.userComments && article.userComments.length > 0 ? (
+                    article.userComments.map((comment) => (
+                      <div key={comment.id} className="flex gap-3 animate-in slide-in-from-bottom-2 duration-300">
+                         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-slate-700 text-slate-300' : 'bg-blue-100 text-blue-700'}`}>
+                           {comment.user.charAt(0)}
+                         </div>
+                         <div>
+                            <div className="flex items-baseline gap-2 mb-1">
+                               <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{comment.user}</span>
+                               <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                                 {new Date(comment.date).toLocaleDateString()}
+                               </span>
+                            </div>
+                            <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{comment.text}</p>
+                         </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className={`text-sm italic ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>No comments yet.</p>
+                  )}
+               </div>
+
+               {/* Add Comment Form */}
+               <form onSubmit={handleAddComment} className="relative">
+                 <input
+                   type="text"
+                   value={newComment}
+                   onChange={(e) => setNewComment(e.target.value)}
+                   placeholder="Write a comment..."
+                   className={`w-full pl-4 pr-12 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
+                      isDark 
+                        ? 'bg-slate-900 border-slate-700 text-slate-200 placeholder-slate-500' 
+                        : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                   }`}
+                 />
+                 <button
+                   type="submit"
+                   disabled={!newComment.trim()}
+                   className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                 >
+                   <Send size={18} />
+                 </button>
+               </form>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

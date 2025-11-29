@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
-import { Article, Category, UserPreferences } from './types';
-import { MOCK_ARTICLES, CATEGORIES } from './constants';
+import { Article, Category, UserPreferences, MonetizationConfig, Video } from './types';
+import { MOCK_ARTICLES, CATEGORIES, MOCK_VIDEOS } from './constants';
 import AdminEditor from './components/AdminEditor';
 import NewsCard from './components/NewsCard';
 import ArticleModal from './components/ArticleModal';
@@ -9,18 +10,27 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import LoginModal from './components/LoginModal';
 import FeedbackModal from './components/FeedbackModal';
 import SettingsModal from './components/SettingsModal';
-import { Newspaper, LayoutGrid, Menu, X, Shield, Search, BarChart3, PenTool, ChevronLeft, ChevronRight, LogOut, Lock, MessageSquarePlus, Settings } from 'lucide-react';
+import MonetizationPanel from './components/MonetizationPanel';
+import AdUnit from './components/AdUnit';
+import VideoManager from './components/VideoManager';
+import VideoFeed from './components/VideoFeed';
+import { Newspaper, LayoutGrid, Menu, X, Shield, Search, BarChart3, PenTool, ChevronLeft, ChevronRight, LogOut, Lock, MessageSquarePlus, Settings, DollarSign, Film } from 'lucide-react';
 
 const App: React.FC = () => {
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [showAdminDashboard, setShowAdminDashboard] = useState(false); // Controls view (Admin vs Reader)
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  
+  // Admin Navigation State: 'publisher' | 'analytics' | 'monetization' | 'videos'
+  const [adminTab, setAdminTab] = useState<'publisher' | 'analytics' | 'monetization' | 'videos'>('publisher');
+
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   
-  const [showAnalytics, setShowAnalytics] = useState(false);
   const [articles, setArticles] = useState<Article[]>(MOCK_ARTICLES);
+  const [videos, setVideos] = useState<Video[]>(MOCK_VIDEOS);
+  
   const [selectedCategory, setSelectedCategory] = useState<Category>('For You');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -37,11 +47,24 @@ const App: React.FC = () => {
     fontSize: 'medium'
   });
 
+  // Monetization State
+  const [monetizationConfig, setMonetizationConfig] = useState<MonetizationConfig>({
+    adsenseId: '',
+    monetagId: '',
+    adsenseEnabled: false,
+    monetagEnabled: false
+  });
+
   // Load from local storage on mount
   useEffect(() => {
     const savedArticles = localStorage.getItem('bigNewsArticles');
     if (savedArticles) {
       setArticles(JSON.parse(savedArticles));
+    }
+
+    const savedVideos = localStorage.getItem('bigNewsVideos');
+    if (savedVideos) {
+      setVideos(JSON.parse(savedVideos));
     }
 
     const savedInterests = localStorage.getItem('bigNewsUserInterests');
@@ -59,6 +82,15 @@ const App: React.FC = () => {
         setPreferences(JSON.parse(savedPreferences));
       } catch (e) {
         console.error("Failed to parse preferences");
+      }
+    }
+
+    const savedMonetization = localStorage.getItem('bigNewsMonetization');
+    if (savedMonetization) {
+      try {
+        setMonetizationConfig(JSON.parse(savedMonetization));
+      } catch (e) {
+        console.error("Failed to parse monetization config");
       }
     }
   }, []);
@@ -81,6 +113,16 @@ const App: React.FC = () => {
     setCurrentPage(1);
   }, [selectedCategory, searchQuery]);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [isMobileMenuOpen]);
+
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
     setShowAdminDashboard(true);
@@ -96,6 +138,27 @@ const App: React.FC = () => {
     const updatedArticles = [article, ...articles];
     setArticles(updatedArticles);
     localStorage.setItem('bigNewsArticles', JSON.stringify(updatedArticles));
+  };
+
+  const handleUpdateArticle = (updatedArticle: Article) => {
+    const updatedArticles = articles.map(a => a.id === updatedArticle.id ? updatedArticle : a);
+    setArticles(updatedArticles);
+    localStorage.setItem('bigNewsArticles', JSON.stringify(updatedArticles));
+    
+    // Also update selectedArticle if it matches to ensure modal stays in sync
+    if (selectedArticle && selectedArticle.id === updatedArticle.id) {
+      setSelectedArticle(updatedArticle);
+    }
+  };
+
+  const handleUpdateVideos = (updatedVideos: Video[]) => {
+    setVideos(updatedVideos);
+    localStorage.setItem('bigNewsVideos', JSON.stringify(updatedVideos));
+  };
+
+  const handleUpdateMonetization = (config: MonetizationConfig) => {
+    setMonetizationConfig(config);
+    localStorage.setItem('bigNewsMonetization', JSON.stringify(config));
   };
 
   const handleArticleClick = (article: Article) => {
@@ -129,7 +192,7 @@ const App: React.FC = () => {
       );
     }
 
-    if (selectedCategory !== 'For You') {
+    if (selectedCategory !== 'For You' && selectedCategory !== 'Videos') {
       result = result.filter(article => article.category === selectedCategory);
     }
 
@@ -171,145 +234,191 @@ const App: React.FC = () => {
 
       {/* Navigation Bar */}
       <nav className={`sticky top-0 z-40 border-b shadow-sm transition-colors duration-300 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16 gap-2">
+            
+            {/* Left: Logo & Mobile Menu */}
+            <div className="flex items-center gap-2 shrink-0">
               <button 
-                className={`md:hidden p-2 mr-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className={`md:hidden p-2 rounded-lg transition-colors active:bg-slate-200/20 ${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'}`}
+                onClick={() => setIsMobileMenuOpen(true)}
+                aria-label="Open menu"
               >
-                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                <Menu size={24} />
               </button>
+              
               <div 
-                className="flex items-center gap-2 cursor-pointer mr-6"
+                className="flex items-center gap-2 cursor-pointer"
                 onClick={() => {
                   if (isAuthenticated) {
                     setShowAdminDashboard(false);
                   }
                   setSelectedCategory('For You');
                   setSearchQuery('');
-                  setShowAnalytics(false);
+                  setAdminTab('publisher');
                 }}
               >
-                <div className={`${isDark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'} p-1.5 rounded-lg`}>
-                  <Newspaper size={24} />
+                <div className={`${isDark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'} p-1.5 rounded-lg shrink-0`}>
+                  <Newspaper size={20} className="sm:w-6 sm:h-6" />
                 </div>
-                <span className={`text-2xl font-black tracking-tight font-serif hidden sm:block ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                <span className={`text-lg sm:text-2xl font-black tracking-tight font-serif hidden xs:inline-block ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   Big<span className="text-blue-600">News</span>
                 </span>
               </div>
             </div>
 
-            {/* Search Bar (Desktop & Mobile) */}
-            <div className="flex-1 max-w-lg flex items-center px-2">
-              <div className="relative w-full">
+            {/* Center: Search Bar (Responsive) */}
+            <div className="flex-1 max-w-lg flex items-center justify-end md:justify-center px-1 sm:px-4">
+              <div className="relative w-full max-w-[200px] sm:max-w-full group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search size={18} className="text-slate-400" />
+                  <Search size={16} className={`transition-colors ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
                 </div>
                 <input
                   type="text"
-                  placeholder="Search news, topics, tags..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`block w-full pl-10 pr-3 py-2 border rounded-full leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all ${
+                  className={`block w-full pl-9 pr-3 py-2 sm:py-2 border rounded-full text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                     isDark 
-                      ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:bg-slate-800' 
-                      : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-500 focus:bg-white'
+                      ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:bg-slate-700' 
+                      : 'bg-slate-100 border-transparent text-slate-900 placeholder-slate-500 focus:bg-white focus:border-slate-300'
                   }`}
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-3 ml-2">
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <button
                 onClick={() => setIsSettingsModalOpen(true)}
-                className={`p-2 rounded-full transition-colors ${isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
+                className={`p-2 rounded-full transition-colors active:scale-95 ${isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
                 title="Settings"
+                aria-label="Settings"
               >
-                <Settings size={20} />
+                <Settings size={22} />
               </button>
 
               {isAuthenticated ? (
-                <div className="flex items-center gap-2">
+                <>
                   <button
                     onClick={() => setShowAdminDashboard(!showAdminDashboard)}
-                    className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
+                    className={`flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 ${
                       showAdminDashboard 
                         ? 'bg-blue-600 text-white' 
                         : isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
+                    title="Dashboard"
                   >
-                    <Shield size={14} />
-                    {showAdminDashboard ? 'Dashboard Active' : 'Go to Dashboard'}
+                    <Shield size={20} className="sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">
+                       {showAdminDashboard ? 'Dashboard Active' : 'Dashboard'}
+                    </span>
                   </button>
                   <button
                     onClick={handleLogout}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs sm:text-sm font-semibold transition-colors ${
+                    className={`p-2 sm:px-3 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2 active:scale-95 ${
                       isDark 
                         ? 'text-slate-400 hover:bg-red-900/20 hover:text-red-400' 
                         : 'text-slate-600 hover:bg-red-50 hover:text-red-600'
                     }`}
                     title="Logout"
                   >
-                    <LogOut size={16} />
+                    <LogOut size={20} />
                     <span className="hidden sm:inline">Logout</span>
                   </button>
-                </div>
+                </>
               ) : (
                 <button
                   onClick={() => setIsLoginModalOpen(true)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all shadow-sm hover:shadow ${
+                  className={`flex items-center gap-2 p-2 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all shadow-sm hover:shadow active:scale-95 ${
                     isDark 
                       ? 'bg-slate-100 text-slate-900 hover:bg-white' 
                       : 'bg-slate-900 text-white hover:bg-slate-800'
                   }`}
+                  title="Admin Login"
                 >
-                  <Lock size={14} />
-                  <span className="hidden sm:inline">Admin Login</span>
+                  <Lock size={18} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Login</span>
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
-           <div className={`md:hidden border-t ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
-             <div className="px-2 pt-2 pb-3 space-y-1">
-               {isAuthenticated && (
-                  <button
-                    onClick={() => {
-                      setShowAdminDashboard(!showAdminDashboard);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-700 bg-blue-50 mb-2"
-                  >
-                    {showAdminDashboard ? 'Switch to Reader View' : 'Switch to Admin Dashboard'}
-                  </button>
-               )}
-               {CATEGORIES.map(cat => (
-                 <button
-                   key={cat}
-                   onClick={() => {
-                     setSelectedCategory(cat);
-                     setIsMobileMenuOpen(false);
-                     setShowAdminDashboard(false);
-                   }}
-                   className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium ${
-                     selectedCategory === cat && !showAdminDashboard
-                       ? (isDark ? 'bg-slate-800 text-white font-bold' : 'bg-slate-100 text-slate-900 font-bold')
-                       : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')
-                   }`}
-                 >
-                   {cat}
-                 </button>
-               ))}
+           <div className="fixed inset-0 z-50 flex md:hidden">
+             <div 
+               className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
+               onClick={() => setIsMobileMenuOpen(false)}
+             />
+             <div className={`relative w-4/5 max-w-xs h-full shadow-2xl flex flex-col ${isDark ? 'bg-slate-900 border-r border-slate-800' : 'bg-white border-r border-slate-200'} animate-in slide-in-from-left duration-300`}>
+                <div className="p-4 border-b border-slate-100/10 flex items-center justify-between">
+                   <div className="flex items-center gap-2">
+                      <div className={`${isDark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'} p-1 rounded`}>
+                        <Newspaper size={16} />
+                      </div>
+                      <span className={`font-bold font-serif ${isDark ? 'text-white' : 'text-slate-900'}`}>Menu</span>
+                   </div>
+                   <button 
+                     onClick={() => setIsMobileMenuOpen(false)}
+                     className={`p-2 rounded-md ${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
+                   >
+                      <X size={20} />
+                   </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+                   {isAuthenticated && (
+                     <div className="mb-4 pb-4 border-b border-slate-100/10">
+                        <div className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Admin</div>
+                        <button
+                          onClick={() => {
+                            setShowAdminDashboard(!showAdminDashboard);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg ${showAdminDashboard ? 'bg-blue-600 text-white' : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')}`}
+                        >
+                          <Shield size={18} />
+                          {showAdminDashboard ? 'Switch to Reader' : 'Admin Dashboard'}
+                        </button>
+                     </div>
+                   )}
+                   
+                   <div className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Categories</div>
+                   {CATEGORIES.map(cat => (
+                     <button
+                       key={cat}
+                       onClick={() => {
+                         setSelectedCategory(cat);
+                         setIsMobileMenuOpen(false);
+                         setShowAdminDashboard(false);
+                       }}
+                       className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg transition-colors ${
+                         selectedCategory === cat && !showAdminDashboard
+                           ? (isDark ? 'bg-slate-800 text-blue-400' : 'bg-blue-50 text-blue-700')
+                           : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')
+                       }`}
+                     >
+                       <span className="w-5 text-center flex justify-center">
+                          {cat === 'Videos' ? <Film size={18} /> : <LayoutGrid size={18} className="opacity-0" />}
+                       </span>
+                       {cat}
+                     </button>
+                   ))}
+                </div>
+                
+                <div className={`p-4 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+                   <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                     &copy; 2024 Big News Inc.
+                   </p>
+                </div>
              </div>
            </div>
         )}
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10">
         <div className="flex flex-col md:flex-row gap-8">
           
           {/* Sidebar (Desktop) */}
@@ -321,28 +430,25 @@ const App: React.FC = () => {
                   <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                     Admin Tools
                   </h3>
-                  <button
-                    onClick={() => setShowAnalytics(false)}
-                    className={`flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                      !showAnalytics
-                        ? (isDark ? 'bg-slate-800 text-blue-400 shadow-sm ring-1 ring-slate-700' : 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200')
-                        : (isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                    }`}
-                  >
-                    <PenTool size={18} />
-                    <span>Publisher</span>
-                  </button>
-                  <button
-                    onClick={() => setShowAnalytics(true)}
-                    className={`flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                      showAnalytics
-                        ? (isDark ? 'bg-slate-800 text-blue-400 shadow-sm ring-1 ring-slate-700' : 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200')
-                        : (isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                    }`}
-                  >
-                    <BarChart3 size={18} />
-                    <span>Analytics</span>
-                  </button>
+                  {[
+                    { id: 'publisher', label: 'Publisher', icon: PenTool },
+                    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+                    { id: 'videos', label: 'Short Videos', icon: Film },
+                    { id: 'monetization', label: 'Monetization', icon: DollarSign },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setAdminTab(item.id as any)}
+                      className={`flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                        adminTab === item.id
+                          ? (isDark ? 'bg-slate-800 text-blue-400 shadow-sm ring-1 ring-slate-700' : 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200')
+                          : (isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
+                      }`}
+                    >
+                      <item.icon size={18} />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
                 </div>
               ) : (
                 // Reader Sidebar
@@ -363,10 +469,25 @@ const App: React.FC = () => {
                           : (isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                       }`}
                     >
-                      <span>{cat}</span>
+                      <span className="flex items-center gap-2">
+                        {cat === 'Videos' && <Film size={16} />}
+                        {cat}
+                      </span>
                       {cat === 'For You' && <LayoutGrid size={16} />}
                     </button>
                   ))}
+                  
+                  {/* Sidebar Ad Slot */}
+                  {(monetizationConfig.adsenseEnabled || monetizationConfig.monetagEnabled) && (
+                    <div className="pt-6 px-1">
+                       <AdUnit 
+                         type={monetizationConfig.monetagEnabled ? 'monetag' : 'adsense'} 
+                         id={monetizationConfig.monetagEnabled ? monetizationConfig.monetagId : monetizationConfig.adsenseId}
+                         preferences={preferences}
+                         label="Sponsored"
+                       />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -378,105 +499,137 @@ const App: React.FC = () => {
                // Admin View
                <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
                  {/* Mobile Tab Switcher for Admin */}
-                 <div className="md:hidden flex mb-6 bg-slate-200 p-1 rounded-lg">
-                    <button 
-                      onClick={() => setShowAnalytics(false)}
-                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${!showAnalytics ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
-                    >
-                      Publisher
-                    </button>
-                    <button 
-                      onClick={() => setShowAnalytics(true)}
-                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${showAnalytics ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
-                    >
-                      Analytics
-                    </button>
+                 <div className="md:hidden flex mb-6 bg-slate-200 dark:bg-slate-800 p-1 rounded-lg overflow-x-auto no-scrollbar">
+                    {[
+                      { id: 'publisher', label: 'Publisher' },
+                      { id: 'analytics', label: 'Analytics' },
+                      { id: 'videos', label: 'Videos' },
+                      { id: 'monetization', label: 'Monetize' },
+                    ].map((tab) => (
+                      <button 
+                        key={tab.id}
+                        onClick={() => setAdminTab(tab.id as any)}
+                        className={`flex-1 py-2 px-3 text-xs font-medium rounded-md transition-all whitespace-nowrap ${
+                          adminTab === tab.id 
+                            ? (isDark ? 'bg-slate-700 text-white shadow-sm' : 'bg-white shadow-sm text-slate-900') 
+                            : (isDark ? 'text-slate-400' : 'text-slate-500')
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
                  </div>
 
-                 {showAnalytics ? (
-                   <AnalyticsDashboard articles={articles} />
-                 ) : (
-                   <AdminEditor onPublish={handlePublish} />
+                 {adminTab === 'publisher' && (
+                    <AdminEditor onPublish={handlePublish} videos={videos} />
+                 )}
+                 {adminTab === 'analytics' && (
+                    <AnalyticsDashboard articles={articles} />
+                 )}
+                 {adminTab === 'monetization' && (
+                    <MonetizationPanel config={monetizationConfig} onUpdate={handleUpdateMonetization} />
+                 )}
+                 {adminTab === 'videos' && (
+                    <VideoManager videos={videos} onUpdateVideos={handleUpdateVideos} />
                  )}
                </div>
             ) : (
               // Reader View
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h1 className={`text-3xl font-bold font-serif ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                    {searchQuery ? `Search results: "${searchQuery}"` : selectedCategory}
-                  </h1>
-                  <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Showing {paginatedArticles.length} of {processedArticles.length} stories
-                  </span>
+              <div className="animate-in fade-in duration-500">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-2">
+                  <div>
+                     <h2 className={`text-2xl sm:text-3xl font-bold font-serif ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                        {selectedCategory === 'For You' ? 'Top Stories For You' : selectedCategory}
+                     </h2>
+                     <p className={`text-sm sm:text-base mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {selectedCategory === 'For You' 
+                          ? 'Curated based on your interests' 
+                          : `Latest updates in ${selectedCategory}`}
+                     </p>
+                  </div>
+                  <div className={`self-start sm:self-auto text-xs sm:text-sm font-medium px-3 py-1 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                    {selectedCategory === 'Videos' ? `${videos.length} Videos` : `${processedArticles.length} Articles`}
+                  </div>
                 </div>
 
-                {paginatedArticles.length > 0 ? (
+                {/* Conditional Rendering: Video Feed or Article Feed */}
+                {selectedCategory === 'Videos' ? (
+                   <VideoFeed videos={videos} />
+                ) : (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {paginatedArticles.map(article => (
-                        <NewsCard 
-                          key={article.id} 
-                          article={article} 
-                          onClick={handleArticleClick}
-                          preferences={preferences}
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                      {paginatedArticles.map((article, index) => (
+                        <React.Fragment key={article.id}>
+                           <NewsCard 
+                              article={article} 
+                              onClick={handleArticleClick} 
+                              preferences={preferences}
+                              onUpdateArticle={handleUpdateArticle}
+                           />
+                           {/* Inject Ad after every 4th article */}
+                           {(index + 1) % 4 === 0 && (monetizationConfig.adsenseEnabled || monetizationConfig.monetagEnabled) && (
+                              <div className="sm:col-span-2">
+                                 <AdUnit 
+                                   type={monetizationConfig.monetagEnabled ? 'monetag' : 'adsense'} 
+                                   id={monetizationConfig.monetagEnabled ? monetizationConfig.monetagId : monetizationConfig.adsenseId}
+                                   preferences={preferences}
+                                 />
+                              </div>
+                           )}
+                        </React.Fragment>
                       ))}
                     </div>
 
-                    {/* Pagination Controls */}
+                    {/* Empty State */}
+                    {paginatedArticles.length === 0 && (
+                      <div className="text-center py-20 px-4">
+                        <p className="text-slate-500 text-lg">No articles found matching your criteria.</p>
+                        <button 
+                          onClick={() => {setSearchQuery(''); setSelectedCategory('For You');}}
+                          className="mt-4 text-blue-600 hover:underline font-medium"
+                        >
+                          Clear filters
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Pagination */}
                     {totalPages > 1 && (
-                      <div className={`flex justify-center items-center gap-4 mt-8 pt-6 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                      <div className="mt-8 sm:mt-12 flex justify-center items-center gap-2 sm:gap-4 pb-8">
                         <button
                           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                           disabled={currentPage === 1}
-                          className={`flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
-                             isDark 
-                               ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' 
-                               : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                          className={`p-2.5 rounded-lg border transition-all active:scale-95 ${
+                            currentPage === 1 
+                              ? 'opacity-50 cursor-not-allowed border-transparent' 
+                              : isDark 
+                                ? 'border-slate-700 hover:bg-slate-800 text-slate-300' 
+                                : 'border-slate-300 hover:bg-slate-50 text-slate-700'
                           }`}
                         >
-                          <ChevronLeft size={16} />
-                          Previous
+                          <ChevronLeft size={20} />
                         </button>
-                        <span className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                        
+                        <div className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                           Page {currentPage} of {totalPages}
-                        </span>
+                        </div>
+
                         <button
                           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                           disabled={currentPage === totalPages}
-                          className={`flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
-                             isDark 
-                               ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' 
-                               : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                          className={`p-2.5 rounded-lg border transition-all active:scale-95 ${
+                            currentPage === totalPages 
+                              ? 'opacity-50 cursor-not-allowed border-transparent' 
+                              : isDark 
+                                ? 'border-slate-700 hover:bg-slate-800 text-slate-300' 
+                                : 'border-slate-300 hover:bg-slate-50 text-slate-700'
                           }`}
                         >
-                          Next
-                          <ChevronRight size={16} />
+                          <ChevronRight size={20} />
                         </button>
                       </div>
                     )}
                   </>
-                ) : (
-                  <div className={`text-center py-20 backdrop-blur-sm rounded-xl border border-dashed ${isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-white/50 border-slate-300'}`}>
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-slate-700' : 'bg-slate-50'}`}>
-                      <Search size={32} className="text-slate-400" />
-                    </div>
-                    <h3 className={`text-lg font-medium ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>No stories found</h3>
-                    <p className={isDark ? 'text-slate-400' : 'text-slate-500'}>
-                      {searchQuery 
-                        ? `We couldn't find anything matching "${searchQuery}"` 
-                        : `Check back later for news in ${selectedCategory}.`}
-                    </p>
-                    {searchQuery && (
-                      <button 
-                        onClick={() => setSearchQuery('')}
-                        className="mt-4 text-blue-600 font-medium hover:text-blue-800"
-                      >
-                        Clear search
-                      </button>
-                    )}
-                  </div>
                 )}
               </div>
             )}
@@ -484,37 +637,39 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className={`border-t mt-auto py-12 relative z-10 transition-colors ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center justify-center space-y-4">
-          <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>&copy; {new Date().getFullYear()} Big News Inc. All rights reserved.</p>
-          <button 
-            onClick={() => setIsFeedbackModalOpen(true)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
-                isDark 
-                  ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-blue-900/30 hover:text-blue-400' 
-                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-blue-50 hover:text-blue-600'
-            }`}
-          >
-            <MessageSquarePlus size={16} />
-            Give Feedback
-          </button>
-        </div>
-      </footer>
+      {/* Footer Feedback Button - Positioned safe from bottom bars */}
+      <div className="fixed bottom-6 right-4 sm:bottom-8 sm:right-8 z-30">
+        <button
+          onClick={() => setIsFeedbackModalOpen(true)}
+          className={`flex items-center gap-2 px-3 py-3 sm:px-4 rounded-full shadow-lg shadow-black/20 transition-all transform active:scale-95 ${
+            isDark 
+              ? 'bg-blue-600 text-white hover:bg-blue-700' 
+              : 'bg-slate-900 text-white hover:bg-slate-800'
+          }`}
+          aria-label="Give Feedback"
+        >
+          <MessageSquarePlus size={20} />
+          <span className="font-medium hidden sm:inline">Feedback</span>
+        </button>
+      </div>
 
+      {/* Modals */}
       <ArticleModal 
         article={selectedArticle} 
-        onClose={() => setSelectedArticle(null)}
+        onClose={() => setSelectedArticle(null)} 
         preferences={preferences}
+        onUpdateArticle={handleUpdateArticle}
+        monetization={monetizationConfig}
+        videos={videos}
       />
       
       <LoginModal 
         isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
+        onClose={() => setIsLoginModalOpen(false)}
         onLogin={handleLoginSuccess}
       />
 
-      <FeedbackModal 
+      <FeedbackModal
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
       />

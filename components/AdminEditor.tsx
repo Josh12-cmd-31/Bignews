@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
-import { Article, Category } from '../types';
+import { Article, Category, Video } from '../types';
 import { CATEGORIES } from '../constants';
 import { generateArticleContent } from '../services/geminiService';
-import { Sparkles, PenTool, Image as ImageIcon, Loader2, Tags, Save, FileText, Trash2, Clock, AlertTriangle } from 'lucide-react';
+import { Sparkles, PenTool, Image as ImageIcon, Loader2, Tags, Save, FileText, Trash2, Clock, AlertTriangle, Film, Link as LinkIcon, Globe } from 'lucide-react';
 
 interface AdminEditorProps {
   onPublish: (article: Article) => void;
+  videos: Video[];
 }
 
 interface Draft {
@@ -21,14 +23,18 @@ interface Draft {
     imageUrl: string;
     tags: string;
     isBreaking: boolean;
+    linkedVideoId: string;
+    sourceUrl: string;
   };
 }
 
-const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish }) => {
-  const [topic, setTopic] = useState('');
+const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
+  const [inputMode, setInputMode] = useState<'topic' | 'url'>('topic');
+  const [inputValue, setInputValue] = useState(''); // Shared state for topic or URL input
   const [isGenerating, setIsGenerating] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState({
     title: '',
     category: 'Technology' as Category,
@@ -37,7 +43,9 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish }) => {
     author: 'Admin',
     imageUrl: `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 1000)}`,
     tags: '',
-    isBreaking: false
+    isBreaking: false,
+    linkedVideoId: '',
+    sourceUrl: ''
   });
 
   useEffect(() => {
@@ -55,7 +63,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish }) => {
     const newDraft: Draft = {
       id: currentDraftId || Date.now().toString(),
       savedAt: Date.now(),
-      topic,
+      topic: inputValue,
       formData: { ...formData }
     };
 
@@ -75,7 +83,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish }) => {
   const loadDraft = (draft: Draft) => {
     if (window.confirm("Loading this draft will overwrite your current changes. Continue?")) {
       setFormData(draft.formData);
-      setTopic(draft.topic);
+      setInputValue(draft.topic);
       setCurrentDraftId(draft.id);
     }
   };
@@ -91,17 +99,18 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish }) => {
   };
 
   const handleGenerate = async () => {
-    if (!topic.trim()) return;
+    if (!inputValue.trim()) return;
     setIsGenerating(true);
     try {
-      const generated = await generateArticleContent(topic);
+      const generated = await generateArticleContent(inputValue, inputMode);
       setFormData(prev => ({
         ...prev,
         title: generated.title,
         content: generated.content,
         summary: generated.summary,
         category: (CATEGORIES.includes(generated.category as Category) ? generated.category : 'Technology') as Category,
-        tags: generated.tags ? generated.tags.join(', ') : ''
+        tags: generated.tags ? generated.tags.join(', ') : '',
+        sourceUrl: inputMode === 'url' ? inputValue : prev.sourceUrl
       }));
     } catch (err) {
       alert("Failed to generate content. Please check API key or try again.");
@@ -116,11 +125,12 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish }) => {
       id: Date.now().toString(),
       ...formData,
       publishedAt: new Date().toISOString(),
-      isAiGenerated: !!topic,
+      isAiGenerated: !!inputValue,
       tags: formData.tags.split(',').map(t => t.trim()).filter(t => t.length > 0),
       views: 0,
       likes: 0,
-      comments: 0
+      comments: 0,
+      userComments: []
     };
     onPublish(newArticle);
     
@@ -140,9 +150,11 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish }) => {
       author: 'Admin',
       imageUrl: `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 1000)}`,
       tags: '',
-      isBreaking: false
+      isBreaking: false,
+      linkedVideoId: '',
+      sourceUrl: ''
     });
-    setTopic('');
+    setInputValue('');
     setCurrentDraftId(null);
     alert('Article published successfully!');
   };
@@ -210,28 +222,59 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish }) => {
           
           {/* AI Generator Section */}
           <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              AI Content Generator
+            <label className="block text-sm font-semibold text-slate-700 mb-3">
+              AI Content Assistant
             </label>
+            
+            {/* Input Mode Tabs */}
+            <div className="flex gap-2 mb-4">
+               <button
+                 type="button"
+                 onClick={() => { setInputMode('topic'); setInputValue(''); }}
+                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg flex items-center justify-center gap-2 transition-all ${
+                    inputMode === 'topic' 
+                      ? 'bg-white text-blue-600 shadow-sm border border-blue-100' 
+                      : 'bg-transparent text-slate-500 hover:bg-white/50'
+                 }`}
+               >
+                  <Sparkles size={16} />
+                  Topic Generation
+               </button>
+               <button
+                 type="button"
+                 onClick={() => { setInputMode('url'); setInputValue(''); }}
+                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg flex items-center justify-center gap-2 transition-all ${
+                    inputMode === 'url' 
+                      ? 'bg-white text-blue-600 shadow-sm border border-blue-100' 
+                      : 'bg-transparent text-slate-500 hover:bg-white/50'
+                 }`}
+               >
+                  <Globe size={16} />
+                  Import from Link
+               </button>
+            </div>
+
             <div className="flex gap-2">
               <input
                 type="text"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="e.g., New electric vehicle battery breakthrough..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder={inputMode === 'topic' ? "e.g., New electric vehicle battery breakthrough..." : "e.g., https://example.com/news/article-slug"}
                 className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               />
               <button
                 onClick={handleGenerate}
-                disabled={isGenerating || !topic.trim()}
+                disabled={isGenerating || !inputValue.trim()}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
               >
-                {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
-                Generate
+                {isGenerating ? <Loader2 className="animate-spin" size={18} /> : (inputMode === 'url' ? <LinkIcon size={18} /> : <Sparkles size={18} />)}
+                {inputMode === 'url' ? 'Fetch' : 'Generate'}
               </button>
             </div>
             <p className="text-xs text-slate-500 mt-2">
-              Enter a topic and let Gemini draft the article for you.
+              {inputMode === 'topic' 
+                ? 'Enter a topic and let Gemini draft the article for you.' 
+                : 'Enter a URL. AI will attempt to generate an article based on the link structure.'}
             </p>
           </div>
 
@@ -320,6 +363,43 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish }) => {
                   />
                 </div>
              </div>
+            </div>
+            
+            {/* Source URL Field */}
+            <div>
+               <label className="block text-sm font-medium text-slate-700 mb-1">Source URL (Optional)</label>
+               <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input
+                    type="text"
+                    value={formData.sourceUrl}
+                    onChange={(e) => setFormData({ ...formData, sourceUrl: e.target.value })}
+                    placeholder="https://original-news-source.com/article"
+                    className="w-full pl-10 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+               </div>
+               <p className="text-xs text-slate-500 mt-1">Provide a link to the original source if applicable.</p>
+            </div>
+
+            {/* Video Attachment */}
+            <div>
+               <label className="block text-sm font-medium text-slate-700 mb-1">Attach Video (Optional)</label>
+               <div className="relative">
+                 <Film className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                 <select
+                   value={formData.linkedVideoId}
+                   onChange={(e) => setFormData({...formData, linkedVideoId: e.target.value})}
+                   className="w-full pl-10 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white appearance-none"
+                 >
+                   <option value="">-- No Video Linked --</option>
+                   {videos.map(video => (
+                     <option key={video.id} value={video.id}>
+                       {video.title} ({video.type})
+                     </option>
+                   ))}
+                 </select>
+               </div>
+               <p className="text-xs text-slate-500 mt-1">Select a video from the video library to display in the article header.</p>
             </div>
 
             <div className="bg-red-50 p-4 rounded-lg border border-red-100 flex items-center">

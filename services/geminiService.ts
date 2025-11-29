@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { GeneratedArticleContent } from "../types";
 
@@ -26,11 +27,18 @@ const articleSchema: Schema = {
   required: ["title", "summary", "content", "category", "tags"],
 };
 
-export const generateArticleContent = async (topic: string): Promise<GeneratedArticleContent> => {
+export const generateArticleContent = async (input: string, mode: 'topic' | 'url' = 'topic'): Promise<GeneratedArticleContent> => {
   try {
+    let prompt = "";
+    if (mode === 'url') {
+      prompt = `Analyze this URL string: "${input}". infer the news topic from the URL structure (slug) and write a professional news article about it. If the URL is generic, write a general breaking news article. Ensure the tone is professional and journalistic.`;
+    } else {
+      prompt = `Write a news article about: ${input}. ensure the tone is professional and journalistic.`;
+    }
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: `Write a news article about: ${topic}. ensure the tone is professional and journalistic.`,
+      contents: prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: articleSchema,

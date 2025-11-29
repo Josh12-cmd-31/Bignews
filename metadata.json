@@ -1,5 +1,16 @@
 {
   "name": "Big News",
-  "description": "A modern, dynamic news aggregation platform featuring AI-assisted publishing for admins and a curated reading experience for users.",
+  "description": "Stay informed with Big News - A modern, dynamic news aggregation platform featuring AI-assisted publishing, personalized feeds, and breaking news updates across Technology, Sports, Business, and more.",
+  "keywords": [
+    "news",
+    "journalism",
+    "AI",
+    "technology",
+    "sports",
+    "breaking news",
+    "world updates",
+    "personalized feed",
+    "react news app"
+  ],
   "requestFramePermissions": []
 }
