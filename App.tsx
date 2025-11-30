@@ -298,7 +298,7 @@ const App: React.FC = () => {
                 <Settings size={22} />
               </button>
 
-              {isAuthenticated ? (
+              {isAuthenticated && (
                 <>
                   <button
                     onClick={() => setShowAdminDashboard(!showAdminDashboard)}
@@ -327,19 +327,6 @@ const App: React.FC = () => {
                     <span className="hidden sm:inline">Logout</span>
                   </button>
                 </>
-              ) : (
-                <button
-                  onClick={() => setIsLoginModalOpen(true)}
-                  className={`flex items-center gap-2 p-2 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all shadow-sm hover:shadow active:scale-95 ${
-                    isDark 
-                      ? 'bg-slate-100 text-slate-900 hover:bg-white' 
-                      : 'bg-slate-900 text-white hover:bg-slate-800'
-                  }`}
-                  title="Admin Login"
-                >
-                  <Lock size={18} className="sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Login</span>
-                </button>
               )}
             </div>
           </div>
@@ -408,7 +395,18 @@ const App: React.FC = () => {
                    ))}
                 </div>
                 
-                <div className={`p-4 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+                <div className={`p-4 border-t flex flex-col gap-2 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+                   {!isAuthenticated && (
+                     <button 
+                       onClick={() => {
+                         setIsMobileMenuOpen(false);
+                         setIsLoginModalOpen(true);
+                       }}
+                       className={`text-xs text-center font-medium ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-600'}`}
+                     >
+                       Admin Login
+                     </button>
+                   )}
                    <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                      &copy; 2024 Big News Inc.
                    </p>
@@ -629,6 +627,19 @@ const App: React.FC = () => {
                         </button>
                       </div>
                     )}
+                    
+                    {/* Footer with Discreet Admin Login */}
+                    <footer className={`mt-16 py-8 border-t text-center ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                      <p className={`text-sm mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                        &copy; {new Date().getFullYear()} Big News Inc. All rights reserved.
+                      </p>
+                      <button 
+                        onClick={() => setIsLoginModalOpen(true)}
+                        className={`text-xs font-medium transition-colors opacity-50 hover:opacity-100 ${isDark ? 'text-slate-700 hover:text-slate-500' : 'text-slate-300 hover:text-slate-500'}`}
+                      >
+                        Admin Login
+                      </button>
+                    </footer>
                   </>
                 )}
               </div>
