@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Article, UserPreferences, Comment, MonetizationConfig, Video } from '../types';
-import { X, Clock, User, Tag, Hash, Link, Check, Share2, Mail, Heart, MessageSquare, Send, Play, Film, ExternalLink } from 'lucide-react';
+import { X, Clock, User, Tag, Hash, Link, Check, Share2, Mail, Heart, MessageSquare, Send, Play, Film, ExternalLink, Edit2, Save } from 'lucide-react';
 import AdUnit from './AdUnit';
 
 // Inline SVG components for brand icons to ensure stability
@@ -55,6 +55,18 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false); // Simple session-based like state
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  
+  // Guest Profile State
+  const [guestName, setGuestName] = useState('Guest');
+  const [isEditingName, setIsEditingName] = useState(false);
+
+  // Load guest identity from local storage
+  useEffect(() => {
+    const storedName = localStorage.getItem('bigNewsGuestName');
+    if (storedName) {
+      setGuestName(storedName);
+    }
+  }, []);
 
   // Reset video state when article changes
   useEffect(() => {
@@ -101,13 +113,29 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
     });
   };
 
+  const handleSaveName = () => {
+    const trimmedName = guestName.trim() || 'Guest';
+    setGuestName(trimmedName);
+    localStorage.setItem('bigNewsGuestName', trimmedName);
+    setIsEditingName(false);
+  };
+
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
 
+    // Get or Create User ID
+    let userId = localStorage.getItem('bigNewsGuestId');
+    if (!userId) {
+      userId = 'u-' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+      localStorage.setItem('bigNewsGuestId', userId);
+    }
+
     const comment: Comment = {
       id: Date.now().toString(),
-      user: 'Guest User', // Hardcoded for guest mode
+      userId: userId,
+      user: guestName,
+      userAvatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(guestName)}&background=random`,
       text: newComment.trim(),
       date: new Date().toISOString()
     };
@@ -398,18 +426,24 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
 
             {/* Comments Section */}
             <div className={`rounded-xl p-4 sm:p-6 ${isDark ? 'bg-slate-800/50' : 'bg-slate-50'}`}>
-               <h4 className={`text-lg font-bold mb-6 flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                 <MessageSquare size={20} />
-                 Comments ({article.userComments?.length || 0})
-               </h4>
+               <div className="flex items-center justify-between mb-6">
+                 <h4 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                   <MessageSquare size={20} />
+                   Comments ({article.userComments?.length || 0})
+                 </h4>
+               </div>
 
                <div className="space-y-6 mb-8">
                   {article.userComments && article.userComments.length > 0 ? (
                     article.userComments.map((comment) => (
                       <div key={comment.id} className="flex gap-3 animate-in slide-in-from-bottom-2 duration-300">
-                         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-slate-700 text-slate-300' : 'bg-blue-100 text-blue-700'}`}>
-                           {comment.user.charAt(0)}
-                         </div>
+                         {comment.userAvatarUrl ? (
+                           <img src={comment.userAvatarUrl} alt={comment.user} className="w-10 h-10 rounded-full shrink-0 object-cover" />
+                         ) : (
+                           <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-slate-700 text-slate-300' : 'bg-blue-100 text-blue-700'}`}>
+                             {comment.user.charAt(0)}
+                           </div>
+                         )}
                          <div>
                             <div className="flex items-baseline gap-2 mb-1">
                                <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{comment.user}</span>
@@ -428,6 +462,33 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
 
                {/* Add Comment Form */}
                <form onSubmit={handleAddComment} className="relative">
+                 <div className="mb-2 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1">
+                       <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Posting as:</span>
+                       {isEditingName ? (
+                         <div className="flex items-center gap-1">
+                           <input 
+                              type="text" 
+                              value={guestName}
+                              onChange={(e) => setGuestName(e.target.value)}
+                              className={`px-2 py-0.5 rounded border ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                              autoFocus
+                           />
+                           <button type="button" onClick={handleSaveName} className="p-0.5 text-green-500 hover:bg-green-100 rounded">
+                              <Save size={14} />
+                           </button>
+                         </div>
+                       ) : (
+                         <div className="flex items-center gap-1">
+                           <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{guestName}</span>
+                           <button type="button" onClick={() => setIsEditingName(true)} className="text-blue-500 hover:underline">
+                              <Edit2 size={12} />
+                           </button>
+                         </div>
+                       )}
+                    </div>
+                 </div>
+
                  <input
                    type="text"
                    value={newComment}
@@ -442,7 +503,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
                  <button
                    type="submit"
                    disabled={!newComment.trim()}
-                   className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                   className="absolute right-2 bottom-1.5 p-2 rounded-md text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
                  >
                    <Send size={18} />
                  </button>

@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, Lock, User, Key, LogIn, AlertCircle, Save } from 'lucide-react';
+import Logo from './Logo';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -81,12 +83,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-slate-900 p-6 flex justify-between items-start">
-          <div>
-            <h2 className="text-2xl font-bold text-white font-serif flex items-center gap-2">
-              <Lock size={24} className="text-blue-500" />
+          <div className="flex flex-col gap-2">
+            <Logo isDark={true} />
+            <h2 className="text-xl font-bold text-white font-serif flex items-center gap-2 mt-2">
+              <Lock size={20} className="text-blue-500" />
               {isFirstTime ? 'Set Admin Access' : 'Admin Login'}
             </h2>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-slate-400 text-sm">
               {isFirstTime 
                 ? 'Create your admin credentials to secure the dashboard.' 
                 : 'Please log in to manage content.'}

@@ -3,7 +3,9 @@ export type Category = 'For You' | 'Technology' | 'Politics' | 'Lifestyle' | 'Sp
 
 export interface Comment {
   id: string;
+  userId: string;
   user: string;
+  userAvatarUrl?: string;
   text: string;
   date: string;
 }

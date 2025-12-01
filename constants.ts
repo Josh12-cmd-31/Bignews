@@ -61,8 +61,20 @@ export const MOCK_ARTICLES: Article[] = [
     likes: 840,
     comments: 2,
     userComments: [
-      { id: 'c1', user: 'TechEnthusiast', text: 'This is incredible news for the industry!', date: new Date(Date.now() - 80000000).toISOString() },
-      { id: 'c2', user: 'DevOps_Dan', text: 'I wonder how this handles error correction rates?', date: new Date(Date.now() - 70000000).toISOString() }
+      { 
+        id: 'c1', 
+        userId: 'user1',
+        user: 'TechEnthusiast', 
+        text: 'This is incredible news for the industry!', 
+        date: new Date(Date.now() - 80000000).toISOString() 
+      },
+      { 
+        id: 'c2', 
+        userId: 'user2',
+        user: 'DevOps_Dan', 
+        text: 'I wonder how this handles error correction rates?', 
+        date: new Date(Date.now() - 70000000).toISOString() 
+      }
     ],
     isBreaking: false,
     linkedVideoId: 'v1'
@@ -85,7 +97,13 @@ export const MOCK_ARTICLES: Article[] = [
     likes: 1205,
     comments: 1,
     userComments: [
-       { id: 'c3', user: 'TravelBug', text: 'Takoyaki is my absolute favorite!', date: new Date(Date.now() - 100000000).toISOString() }
+       { 
+         id: 'c3', 
+         userId: 'user3',
+         user: 'TravelBug', 
+         text: 'Takoyaki is my absolute favorite!', 
+         date: new Date(Date.now() - 100000000).toISOString() 
+       }
     ],
     isBreaking: false,
   },

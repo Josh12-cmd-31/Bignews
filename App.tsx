@@ -14,6 +14,7 @@ import MonetizationPanel from './components/MonetizationPanel';
 import AdUnit from './components/AdUnit';
 import VideoManager from './components/VideoManager';
 import VideoFeed from './components/VideoFeed';
+import Logo from './components/Logo';
 import { Newspaper, LayoutGrid, Menu, X, Shield, Search, BarChart3, PenTool, ChevronLeft, ChevronRight, LogOut, Lock, MessageSquarePlus, Settings, DollarSign, Film } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -107,6 +108,24 @@ const App: React.FC = () => {
     // Persist changes
     localStorage.setItem('bigNewsPreferences', JSON.stringify(preferences));
   }, [preferences]);
+
+  // Handle Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Admin Login Shortcut: Ctrl + Shift + L
+      if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+        e.preventDefault();
+        if (!isAuthenticated) {
+           setIsLoginModalOpen(true);
+        } else {
+           setShowAdminDashboard(prev => !prev);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAuthenticated]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -230,198 +249,193 @@ const App: React.FC = () => {
         <span className={`text-[12vw] font-black leading-none tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>BIG NEWS</span>
       </div>
 
-      <BreakingNewsBanner articles={articles} onArticleClick={handleArticleClick} />
+      {/* Sticky Header Group: Banner + Nav */}
+      <div className="sticky top-0 z-40 w-full flex flex-col">
+        <BreakingNewsBanner articles={articles} onArticleClick={handleArticleClick} />
 
-      {/* Navigation Bar */}
-      <nav className={`sticky top-0 z-40 border-b shadow-sm transition-colors duration-300 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 gap-2">
-            
-            {/* Left: Logo & Mobile Menu */}
-            <div className="flex items-center gap-2 shrink-0">
-              <button 
-                className={`md:hidden p-2 rounded-lg transition-colors active:bg-slate-200/20 ${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'}`}
-                onClick={() => setIsMobileMenuOpen(true)}
-                aria-label="Open menu"
-              >
-                <Menu size={24} />
-              </button>
+        {/* Navigation Bar */}
+        <nav className={`border-b shadow-sm transition-colors duration-300 w-full ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="max-w-[1920px] mx-auto px-3 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16 gap-2">
               
-              <div 
-                className="flex items-center gap-2 cursor-pointer"
-                onClick={() => {
-                  if (isAuthenticated) {
-                    setShowAdminDashboard(false);
-                  }
-                  setSelectedCategory('For You');
-                  setSearchQuery('');
-                  setAdminTab('publisher');
-                }}
-              >
-                <div className={`${isDark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'} p-1.5 rounded-lg shrink-0`}>
-                  <Newspaper size={20} className="sm:w-6 sm:h-6" />
+              {/* Left: Logo & Mobile Menu */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button 
+                  className={`md:hidden p-2 rounded-lg transition-colors active:bg-slate-200/20 ${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'}`}
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  aria-label="Open menu"
+                >
+                  <Menu size={24} />
+                </button>
+                
+                <div 
+                  className="cursor-pointer"
+                  onClick={() => {
+                    if (isAuthenticated) {
+                      setShowAdminDashboard(false);
+                    }
+                    setSelectedCategory('For You');
+                    setSearchQuery('');
+                    setAdminTab('publisher');
+                  }}
+                >
+                  <Logo isDark={isDark} />
                 </div>
-                <span className={`text-lg sm:text-2xl font-black tracking-tight font-serif hidden xs:inline-block ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Big<span className="text-blue-600">News</span>
-                </span>
               </div>
-            </div>
 
-            {/* Center: Search Bar (Responsive) */}
-            <div className="flex-1 max-w-lg flex items-center justify-end md:justify-center px-1 sm:px-4">
-              <div className="relative w-full max-w-[200px] sm:max-w-full group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search size={16} className={`transition-colors ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`block w-full pl-9 pr-3 py-2 sm:py-2 border rounded-full text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-                    isDark 
-                      ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:bg-slate-700' 
-                      : 'bg-slate-100 border-transparent text-slate-900 placeholder-slate-500 focus:bg-white focus:border-slate-300'
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Right: Actions */}
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              <button
-                onClick={() => setIsSettingsModalOpen(true)}
-                className={`p-2 rounded-full transition-colors active:scale-95 ${isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
-                title="Settings"
-                aria-label="Settings"
-              >
-                <Settings size={22} />
-              </button>
-
-              {isAuthenticated && (
-                <>
-                  <button
-                    onClick={() => setShowAdminDashboard(!showAdminDashboard)}
-                    className={`flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 ${
-                      showAdminDashboard 
-                        ? 'bg-blue-600 text-white' 
-                        : isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                    title="Dashboard"
-                  >
-                    <Shield size={20} className="sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline">
-                       {showAdminDashboard ? 'Dashboard Active' : 'Dashboard'}
-                    </span>
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className={`p-2 sm:px-3 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2 active:scale-95 ${
+              {/* Center: Search Bar (Responsive) */}
+              <div className="flex-1 max-w-lg flex items-center justify-end md:justify-center px-1 sm:px-4">
+                <div className="relative w-full max-w-[200px] sm:max-w-full group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search size={16} className={`transition-colors ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={`block w-full pl-9 pr-3 py-2 sm:py-2 border rounded-full text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                       isDark 
-                        ? 'text-slate-400 hover:bg-red-900/20 hover:text-red-400' 
-                        : 'text-slate-600 hover:bg-red-50 hover:text-red-600'
+                        ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:bg-slate-700' 
+                        : 'bg-slate-100 border-transparent text-slate-900 placeholder-slate-500 focus:bg-white focus:border-slate-300'
                     }`}
-                    title="Logout"
-                  >
-                    <LogOut size={20} />
-                    <span className="hidden sm:inline">Logout</span>
-                  </button>
-                </>
-              )}
+                  />
+                </div>
+              </div>
+
+              {/* Right: Actions */}
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                <button
+                  onClick={() => setIsSettingsModalOpen(true)}
+                  className={`p-2 rounded-full transition-colors active:scale-95 ${isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
+                  title="Settings"
+                  aria-label="Settings"
+                >
+                  <Settings size={22} />
+                </button>
+
+                {isAuthenticated && (
+                  <>
+                    <button
+                      onClick={() => setShowAdminDashboard(!showAdminDashboard)}
+                      className={`flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 ${
+                        showAdminDashboard 
+                          ? 'bg-blue-600 text-white' 
+                          : isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                      title="Dashboard"
+                    >
+                      <Shield size={20} className="sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">
+                        {showAdminDashboard ? 'Dashboard Active' : 'Dashboard'}
+                      </span>
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className={`p-2 sm:px-3 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2 active:scale-95 ${
+                        isDark 
+                          ? 'text-slate-400 hover:bg-red-900/20 hover:text-red-400' 
+                          : 'text-slate-600 hover:bg-red-50 hover:text-red-600'
+                      }`}
+                      title="Logout"
+                    >
+                      <LogOut size={20} />
+                      <span className="hidden sm:inline">Logout</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Mobile Menu Overlay */}
-        {isMobileMenuOpen && (
-           <div className="fixed inset-0 z-50 flex md:hidden">
-             <div 
-               className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
-               onClick={() => setIsMobileMenuOpen(false)}
-             />
-             <div className={`relative w-4/5 max-w-xs h-full shadow-2xl flex flex-col ${isDark ? 'bg-slate-900 border-r border-slate-800' : 'bg-white border-r border-slate-200'} animate-in slide-in-from-left duration-300`}>
-                <div className="p-4 border-b border-slate-100/10 flex items-center justify-between">
-                   <div className="flex items-center gap-2">
-                      <div className={`${isDark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white'} p-1 rounded`}>
-                        <Newspaper size={16} />
+          {/* Mobile Menu Overlay */}
+          {isMobileMenuOpen && (
+            <div className="fixed inset-0 z-50 flex md:hidden">
+              <div 
+                className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+              <div className={`relative w-4/5 max-w-xs h-full shadow-2xl flex flex-col ${isDark ? 'bg-slate-900 border-r border-slate-800' : 'bg-white border-r border-slate-200'} animate-in slide-in-from-left duration-300`}>
+                  <div className="p-4 border-b border-slate-100/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Logo isDark={isDark} />
+                    </div>
+                    <button 
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`p-2 rounded-md ${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
+                    >
+                        <X size={20} />
+                    </button>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+                    {isAuthenticated && (
+                      <div className="mb-4 pb-4 border-b border-slate-100/10">
+                          <div className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Admin</div>
+                          <button
+                            onClick={() => {
+                              setShowAdminDashboard(!showAdminDashboard);
+                              setIsMobileMenuOpen(false);
+                            }}
+                            className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg ${showAdminDashboard ? 'bg-blue-600 text-white' : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')}`}
+                          >
+                            <Shield size={18} />
+                            {showAdminDashboard ? 'Switch to Reader' : 'Admin Dashboard'}
+                          </button>
                       </div>
-                      <span className={`font-bold font-serif ${isDark ? 'text-white' : 'text-slate-900'}`}>Menu</span>
-                   </div>
-                   <button 
-                     onClick={() => setIsMobileMenuOpen(false)}
-                     className={`p-2 rounded-md ${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
-                   >
-                      <X size={20} />
-                   </button>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-                   {isAuthenticated && (
-                     <div className="mb-4 pb-4 border-b border-slate-100/10">
-                        <div className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Admin</div>
-                        <button
-                          onClick={() => {
-                            setShowAdminDashboard(!showAdminDashboard);
-                            setIsMobileMenuOpen(false);
-                          }}
-                          className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg ${showAdminDashboard ? 'bg-blue-600 text-white' : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')}`}
-                        >
-                          <Shield size={18} />
-                          {showAdminDashboard ? 'Switch to Reader' : 'Admin Dashboard'}
-                        </button>
-                     </div>
-                   )}
-                   
-                   <div className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Categories</div>
-                   {CATEGORIES.map(cat => (
-                     <button
-                       key={cat}
-                       onClick={() => {
-                         setSelectedCategory(cat);
-                         setIsMobileMenuOpen(false);
-                         setShowAdminDashboard(false);
-                       }}
-                       className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg transition-colors ${
-                         selectedCategory === cat && !showAdminDashboard
-                           ? (isDark ? 'bg-slate-800 text-blue-400' : 'bg-blue-50 text-blue-700')
-                           : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')
-                       }`}
-                     >
-                       <span className="w-5 text-center flex justify-center">
-                          {cat === 'Videos' ? <Film size={18} /> : <LayoutGrid size={18} className="opacity-0" />}
-                       </span>
-                       {cat}
-                     </button>
-                   ))}
-                </div>
-                
-                <div className={`p-4 border-t flex flex-col gap-2 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
-                   {!isAuthenticated && (
-                     <button 
-                       onClick={() => {
-                         setIsMobileMenuOpen(false);
-                         setIsLoginModalOpen(true);
-                       }}
-                       className={`text-xs text-center font-medium ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-600'}`}
-                     >
-                       Admin Login
-                     </button>
-                   )}
-                   <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                     &copy; 2024 Big News Inc.
-                   </p>
-                </div>
-             </div>
-           </div>
-        )}
-      </nav>
+                    )}
+                    
+                    <div className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Categories</div>
+                    {CATEGORIES.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          setSelectedCategory(cat);
+                          setIsMobileMenuOpen(false);
+                          setShowAdminDashboard(false);
+                        }}
+                        className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg transition-colors ${
+                          selectedCategory === cat && !showAdminDashboard
+                            ? (isDark ? 'bg-slate-800 text-blue-400' : 'bg-blue-50 text-blue-700')
+                            : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')
+                        }`}
+                      >
+                        <span className="w-5 text-center flex justify-center">
+                            {cat === 'Videos' ? <Film size={18} /> : <LayoutGrid size={18} className="opacity-0" />}
+                        </span>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <div className={`p-4 border-t flex flex-col gap-2 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+                    {!isAuthenticated && (
+                      <button 
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          setIsLoginModalOpen(true);
+                        }}
+                        className={`text-xs text-center font-medium ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        Admin Login
+                      </button>
+                    )}
+                    <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                      &copy; 2024 Big News Inc.
+                    </p>
+                  </div>
+              </div>
+            </div>
+          )}
+        </nav>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10">
         <div className="flex flex-col md:flex-row gap-8">
           
           {/* Sidebar (Desktop) */}
           <aside className="hidden md:block w-64 flex-shrink-0">
-            <div className="sticky top-24 space-y-4">
+            <div className="sticky top-40 space-y-4"> {/* Increased top value because header is taller now */}
               {isAuthenticated && showAdminDashboard ? (
                 // Admin Sidebar
                 <div className="space-y-1">
@@ -555,7 +569,7 @@ const App: React.FC = () => {
                    <VideoFeed videos={videos} />
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                       {paginatedArticles.map((article, index) => (
                         <React.Fragment key={article.id}>
                            <NewsCard 
@@ -566,7 +580,7 @@ const App: React.FC = () => {
                            />
                            {/* Inject Ad after every 4th article */}
                            {(index + 1) % 4 === 0 && (monetizationConfig.adsenseEnabled || monetizationConfig.monetagEnabled) && (
-                              <div className="sm:col-span-2">
+                              <div className="sm:col-span-2 lg:col-span-3">
                                  <AdUnit 
                                    type={monetizationConfig.monetagEnabled ? 'monetag' : 'adsense'} 
                                    id={monetizationConfig.monetagEnabled ? monetizationConfig.monetagId : monetizationConfig.adsenseId}
