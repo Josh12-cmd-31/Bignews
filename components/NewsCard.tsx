@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Article, UserPreferences } from '../types';
 import { ArrowRight, Clock, Hash, Eye, Heart, MessageSquare } from 'lucide-react';
+import Logo from './Logo';
 
 interface NewsCardProps {
   article: Article;
@@ -48,7 +48,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ article, onClick, preferences, onUp
         />
         
         {/* Content Preview Overlay - Hidden on touch devices by default behavior, visible on hover for mouse */}
-        <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center p-6 text-white hidden sm:flex pointer-events-none">
+        <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center p-6 text-white hidden sm:flex pointer-events-none z-30">
            <div className="flex items-center gap-2 mb-3 text-blue-400 text-xs font-bold uppercase tracking-wider translate-y-4 group-hover:translate-y-0 transition-transform duration-300 ease-out">
              <Eye size={14} />
              Quick Preview
@@ -59,12 +59,12 @@ const NewsCard: React.FC<NewsCardProps> = ({ article, onClick, preferences, onUp
         </div>
         
         {/* Watermark - Consistently visible, unobtrusive */}
-        <div className="absolute bottom-3 right-3 opacity-25 z-20 pointer-events-none">
-           <span className="text-[10px] font-black text-white font-serif tracking-widest drop-shadow-md border-b border-white/30 pb-0.5">BIG NEWS</span>
+        <div className="absolute bottom-3 right-3 opacity-30 z-20 pointer-events-none scale-75 origin-bottom-right">
+           <Logo variant="watermark" />
         </div>
 
         {/* Category Badge - Hide on hover only on larger screens */}
-        <div className="absolute top-4 left-4 sm:group-hover:opacity-0 transition-opacity duration-300">
+        <div className="absolute top-4 left-4 sm:group-hover:opacity-0 transition-opacity duration-300 z-10">
           <span className="px-3 py-1 bg-white/90 backdrop-blur-md text-slate-800 text-xs font-bold uppercase tracking-wider rounded-full shadow-sm">
             {article.category}
           </span>

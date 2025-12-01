@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Article, UserPreferences, Comment, MonetizationConfig, Video } from '../types';
 import { X, Clock, User, Tag, Hash, Link, Check, Share2, Mail, Heart, MessageSquare, Send, Play, Film, ExternalLink, Edit2, Save } from 'lucide-react';
 import AdUnit from './AdUnit';
+import Logo from './Logo';
 
 // Inline SVG components for brand icons to ensure stability
 const TwitterIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
@@ -241,8 +241,8 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
               )}
 
               {/* Watermark - unobtrusive */}
-              <div className="absolute top-6 left-6 opacity-20 pointer-events-none z-10">
-                <span className="text-xl md:text-2xl font-black text-white font-serif tracking-widest drop-shadow-lg border-b-2 border-white/20 pb-1">BIG NEWS</span>
+              <div className="absolute top-6 left-6 opacity-30 pointer-events-none z-10 scale-90 origin-top-left">
+                <Logo variant="watermark" />
               </div>
 
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 sm:p-6 pt-20 pointer-events-none">
