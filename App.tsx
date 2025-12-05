@@ -249,12 +249,12 @@ const App: React.FC = () => {
         <span className={`text-[12vw] font-black leading-none tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>BIG NEWS</span>
       </div>
 
-      {/* Sticky Header Group: Banner + Nav */}
-      <div className="sticky top-0 z-40 w-full flex flex-col">
+      {/* Sticky Header Group: Banner + Nav + Category Bar */}
+      <div className="sticky top-0 z-40 w-full flex flex-col shadow-sm">
         <BreakingNewsBanner articles={articles} onArticleClick={handleArticleClick} />
 
         {/* Navigation Bar */}
-        <nav className={`border-b shadow-sm transition-colors duration-300 w-full ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+        <nav className={`transition-colors duration-300 w-full ${isDark ? 'bg-slate-900 border-b border-slate-800' : 'bg-white border-b border-slate-200'}`}>
           <div className="max-w-[1920px] mx-auto px-3 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16 gap-2">
               
@@ -347,95 +347,45 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
+        </nav>
 
-          {/* Mobile Menu Overlay */}
-          {isMobileMenuOpen && (
-            <div className="fixed inset-0 z-50 flex md:hidden">
-              <div 
-                className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
-                onClick={() => setIsMobileMenuOpen(false)}
-              />
-              <div className={`relative w-4/5 max-w-xs h-full shadow-2xl flex flex-col ${isDark ? 'bg-slate-900 border-r border-slate-800' : 'bg-white border-r border-slate-200'} animate-in slide-in-from-left duration-300`}>
-                  <div className="p-4 border-b border-slate-100/10 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Logo isDark={isDark} />
-                    </div>
-                    <button 
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`p-2 rounded-md ${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
-                    >
-                        <X size={20} />
-                    </button>
-                  </div>
-                  
-                  <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-                    {isAuthenticated && (
-                      <div className="mb-4 pb-4 border-b border-slate-100/10">
-                          <div className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Admin</div>
-                          <button
-                            onClick={() => {
-                              setShowAdminDashboard(!showAdminDashboard);
-                              setIsMobileMenuOpen(false);
-                            }}
-                            className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg ${showAdminDashboard ? 'bg-blue-600 text-white' : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')}`}
-                          >
-                            <Shield size={18} />
-                            {showAdminDashboard ? 'Switch to Reader' : 'Admin Dashboard'}
-                          </button>
-                      </div>
-                    )}
-                    
-                    <div className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Categories</div>
-                    {CATEGORIES.map(cat => (
-                      <button
-                        key={cat}
-                        onClick={() => {
-                          setSelectedCategory(cat);
-                          setIsMobileMenuOpen(false);
-                          setShowAdminDashboard(false);
-                        }}
-                        className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg transition-colors ${
-                          selectedCategory === cat && !showAdminDashboard
-                            ? (isDark ? 'bg-slate-800 text-blue-400' : 'bg-blue-50 text-blue-700')
-                            : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')
-                        }`}
-                      >
-                        <span className="w-5 text-center flex justify-center">
-                            {cat === 'Videos' ? <Film size={18} /> : <LayoutGrid size={18} className="opacity-0" />}
-                        </span>
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  <div className={`p-4 border-t flex flex-col gap-2 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
-                    {!isAuthenticated && (
-                      <button 
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          setIsLoginModalOpen(true);
-                        }}
-                        className={`text-xs text-center font-medium ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-600'}`}
-                      >
-                        Admin Login
-                      </button>
-                    )}
-                    <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                      &copy; 2024 Big News Inc.
-                    </p>
-                  </div>
+        {/* Sliding Category Bar */}
+        {!showAdminDashboard && (
+          <div className={`w-full overflow-x-auto no-scrollbar border-b ${isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200'} backdrop-blur-sm transition-colors`}>
+            <div className="max-w-[1920px] mx-auto px-3 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-2 sm:gap-4 py-3 min-w-max">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                       setSelectedCategory(cat);
+                       setShowAdminDashboard(false);
+                       window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`relative px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${
+                       selectedCategory === cat
+                          ? (isDark ? 'bg-white text-slate-900 shadow-md' : 'bg-slate-900 text-white shadow-md')
+                          : (isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                       {cat === 'Videos' && <Film size={14} className={selectedCategory === cat ? 'animate-pulse' : ''} />}
+                       {cat}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
-          )}
-        </nav>
+          </div>
+        )}
       </div>
 
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10">
         <div className="flex flex-col md:flex-row gap-8">
           
-          {/* Sidebar (Desktop) */}
+          {/* Sidebar (Desktop) - Kept as secondary nav for wider screens */}
           <aside className="hidden md:block w-64 flex-shrink-0">
-            <div className="sticky top-40 space-y-4"> {/* Increased top value because header is taller now */}
+            <div className="sticky top-48 space-y-4"> {/* Increased top value to account for double header */}
               {isAuthenticated && showAdminDashboard ? (
                 // Admin Sidebar
                 <div className="space-y-1">
@@ -463,35 +413,11 @@ const App: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                // Reader Sidebar
-                <div className="space-y-1">
-                  <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Sections
-                  </h3>
-                  {CATEGORIES.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        setSelectedCategory(cat);
-                        setShowAdminDashboard(false);
-                      }}
-                      className={`flex items-center justify-between w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                        selectedCategory === cat && !showAdminDashboard
-                          ? (isDark ? 'bg-slate-800 text-blue-400 shadow-sm ring-1 ring-slate-700' : 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200')
-                          : (isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        {cat === 'Videos' && <Film size={16} />}
-                        {cat}
-                      </span>
-                      {cat === 'For You' && <LayoutGrid size={16} />}
-                    </button>
-                  ))}
-                  
+                // Reader Sidebar (Ad slot focus, categories are now on top)
+                <div className="space-y-4">
                   {/* Sidebar Ad Slot */}
                   {(monetizationConfig.adsenseEnabled || monetizationConfig.monetagEnabled) && (
-                    <div className="pt-6 px-1">
+                    <div className="pt-2 px-1">
                        <AdUnit 
                          type={monetizationConfig.monetagEnabled ? 'monetag' : 'adsense'} 
                          id={monetizationConfig.monetagEnabled ? monetizationConfig.monetagId : monetizationConfig.adsenseId}
@@ -500,6 +426,12 @@ const App: React.FC = () => {
                        />
                     </div>
                   )}
+                  
+                   <div className="px-4 py-6 rounded-xl border border-dashed text-center opacity-50 text-sm">
+                      <p className={isDark ? 'text-slate-500' : 'text-slate-400'}>
+                        Additional sidebar content, widgets, or trending topics can be placed here.
+                      </p>
+                   </div>
                 </div>
               )}
             </div>
@@ -677,6 +609,81 @@ const App: React.FC = () => {
           <span className="font-medium hidden sm:inline">Feedback</span>
         </button>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+            <div className="fixed inset-0 z-50 flex md:hidden">
+              <div 
+                className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+              <div className={`relative w-4/5 max-w-xs h-full shadow-2xl flex flex-col ${isDark ? 'bg-slate-900 border-r border-slate-800' : 'bg-white border-r border-slate-200'} animate-in slide-in-from-left duration-300`}>
+                  <div className="p-4 border-b border-slate-100/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Logo isDark={isDark} />
+                    </div>
+                    <button 
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`p-2 rounded-md ${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
+                    >
+                        <X size={20} />
+                    </button>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto py-4 px-4 space-y-4">
+                    {isAuthenticated && (
+                      <div className="mb-4 pb-4 border-b border-slate-100/10">
+                          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Admin</div>
+                          <button
+                            onClick={() => {
+                              setShowAdminDashboard(!showAdminDashboard);
+                              setIsMobileMenuOpen(false);
+                            }}
+                            className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg ${showAdminDashboard ? 'bg-blue-600 text-white' : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')}`}
+                          >
+                            <Shield size={18} />
+                            {showAdminDashboard ? 'Switch to Reader' : 'Admin Dashboard'}
+                          </button>
+                      </div>
+                    )}
+                    
+                    <div>
+                       <h3 className="text-lg font-bold font-serif mb-2">Welcome</h3>
+                       <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                         Explore the latest news by swiping the topics bar at the top of the screen.
+                       </p>
+                    </div>
+
+                    <div className="pt-4">
+                       <button
+                        onClick={() => setIsSettingsModalOpen(true)}
+                        className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg transition-colors ${isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`}
+                       >
+                         <Settings size={18} />
+                         Settings
+                       </button>
+                    </div>
+                  </div>
+                  
+                  <div className={`p-4 border-t flex flex-col gap-2 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+                    {!isAuthenticated && (
+                      <button 
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          setIsLoginModalOpen(true);
+                        }}
+                        className={`text-xs text-center font-medium ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        Admin Login
+                      </button>
+                    )}
+                    <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                      &copy; 2024 Big News Inc.
+                    </p>
+                  </div>
+              </div>
+            </div>
+      )}
 
       {/* Modals */}
       <ArticleModal 

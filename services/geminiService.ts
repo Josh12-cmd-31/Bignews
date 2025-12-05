@@ -16,7 +16,7 @@ const articleSchema: Schema = {
     category: { 
       type: Type.STRING, 
       description: "The most fitting category for this article.",
-      enum: ['Technology', 'Politics', 'Lifestyle', 'Sports', 'Food', 'Business', 'Science', 'Entertainment']
+      enum: ['Technology', 'Politics', 'Health', 'Lifestyle', 'Sports', 'Food', 'Business', 'Science', 'Entertainment']
     },
     tags: {
       type: Type.ARRAY,
