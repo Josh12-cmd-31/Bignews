@@ -174,6 +174,13 @@ const App: React.FC = () => {
     setVideos(updatedVideos);
     localStorage.setItem('bigNewsVideos', JSON.stringify(updatedVideos));
   };
+  
+  // Allow users to upload video from feed
+  const handleUserVideoUpload = (newVideo: Video) => {
+    const updatedVideos = [newVideo, ...videos];
+    setVideos(updatedVideos);
+    localStorage.setItem('bigNewsVideos', JSON.stringify(updatedVideos));
+  };
 
   const handleUpdateMonetization = (config: MonetizationConfig) => {
     setMonetizationConfig(config);
@@ -498,7 +505,7 @@ const App: React.FC = () => {
 
                 {/* Conditional Rendering: Video Feed or Article Feed */}
                 {selectedCategory === 'Videos' ? (
-                   <VideoFeed videos={videos} />
+                   <VideoFeed videos={videos} onUpload={handleUserVideoUpload} />
                 ) : (
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">

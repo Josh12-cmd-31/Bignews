@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Video } from '../types';
-import { Youtube, Upload, Trash2, Plus, Film, ExternalLink, PlayCircle } from 'lucide-react';
+import { Youtube, Upload, Trash2, Plus, Film, ExternalLink, PlayCircle, FileVideo, CheckCircle2, X } from 'lucide-react';
 
 interface VideoManagerProps {
   videos: Video[];
@@ -13,6 +13,12 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
+  
+  // Upload State
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const extractYoutubeId = (url: string) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -20,20 +26,66 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Basic validation
+      if (!file.type.startsWith('video/')) {
+        alert('Please select a valid video file.');
+        return;
+      }
+      setUploadFile(file);
+      // Auto-set title from filename if empty
+      if (!title) {
+        setTitle(file.name.replace(/\.[^/.]+$/, ""));
+      }
+    }
+  };
+
   const handleAddVideo = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !url) return;
-
-    let finalUrl = url;
+    
     if (activeTab === 'youtube') {
+      if (!title || !url) return;
       const videoId = extractYoutubeId(url);
       if (!videoId) {
         alert('Invalid YouTube URL');
         return;
       }
-      finalUrl = videoId;
-    }
+      publishVideo(videoId);
+    } else {
+      // Handle File Upload
+      if (!title || !uploadFile) return;
+      
+      setIsUploading(true);
+      setUploadProgress(0);
 
+      // Simulate upload progress
+      const interval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      setTimeout(() => {
+        clearInterval(interval);
+        // Create a local blob URL for the file
+        // Note: In a real app, this is where you'd get the URL from your S3 bucket/backend
+        const blobUrl = URL.createObjectURL(uploadFile);
+        publishVideo(blobUrl);
+        setIsUploading(false);
+        setUploadProgress(0);
+        setUploadFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }, 2500);
+    }
+  };
+
+  const publishVideo = (finalUrl: string) => {
     const newVideo: Video = {
       id: Date.now().toString(),
       title,
@@ -48,7 +100,7 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
     setTitle('');
     setUrl('');
     setThumbnailUrl('');
-    alert('Video added successfully!');
+    // alert('Video added successfully!'); 
   };
 
   const handleDeleteVideo = (id: string) => {
@@ -95,7 +147,7 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
               }`}
             >
               <Upload size={18} />
-              Direct URL / Upload
+              Upload File
             </button>
           </div>
 
@@ -109,32 +161,88 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
                 placeholder="Enter engaging title..."
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 required
+                disabled={isUploading}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                {activeTab === 'youtube' ? 'YouTube Video URL' : 'Video File URL (MP4)'}
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder={activeTab === 'youtube' ? "https://youtube.com/watch?v=..." : "https://example.com/video.mp4"}
-                  className="w-full pl-10 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  required
-                />
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  {activeTab === 'youtube' ? <Youtube size={18} /> : <ExternalLink size={18} />}
+            {activeTab === 'youtube' ? (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">YouTube Video URL</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://youtube.com/watch?v=..."
+                    className="w-full pl-10 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                  />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Youtube size={18} />
+                  </div>
                 </div>
               </div>
-              {activeTab === 'upload' && (
-                 <p className="text-xs text-slate-500 mt-1">For demo purposes, enter a direct link to an .mp4 file.</p>
-              )}
-            </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Select Video File</label>
+                
+                {!uploadFile ? (
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-32 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors"
+                  >
+                    <FileVideo size={32} className="text-slate-400 mb-2" />
+                    <span className="text-sm text-slate-600 font-medium">Click to select video</span>
+                    <span className="text-xs text-slate-400">MP4, WebM (Max 50MB)</span>
+                  </div>
+                ) : (
+                  <div className="w-full p-4 bg-white border border-slate-200 rounded-xl flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                        <FileVideo size={24} className="text-blue-500" />
+                        <div>
+                           <p className="text-sm font-bold text-slate-800 line-clamp-1">{uploadFile.name}</p>
+                           <p className="text-xs text-slate-500">{(uploadFile.size / (1024*1024)).toFixed(2)} MB</p>
+                        </div>
+                     </div>
+                     {!isUploading && (
+                       <button 
+                         type="button" 
+                         onClick={() => setUploadFile(null)}
+                         className="p-1 hover:bg-slate-100 rounded-full text-slate-500"
+                       >
+                         <X size={18} />
+                       </button>
+                     )}
+                  </div>
+                )}
+                
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="video/*"
+                  className="hidden"
+                />
 
-            {activeTab === 'upload' && (
+                {isUploading && (
+                  <div className="mt-4">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="font-semibold text-blue-600">Uploading...</span>
+                      <span className="text-slate-500">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${uploadProgress}%` }} 
+                      ></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Optional Thumbnail for Uploads */}
+            {activeTab === 'upload' && !isUploading && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Thumbnail URL (Optional)</label>
                 <input
@@ -149,10 +257,21 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+              disabled={isUploading}
+              className={`w-full py-2.5 rounded-lg font-medium transition-all shadow-md flex items-center justify-center gap-2 ${
+                 isUploading 
+                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                   : 'bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg'
+              }`}
             >
-              <Plus size={18} />
-              Publish Video
+              {isUploading ? (
+                'Processing...'
+              ) : (
+                <>
+                  <Plus size={18} />
+                  Publish Video
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -178,7 +297,7 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
                   </div>
                   <div className="absolute top-2 right-2">
                      <span className={`px-2 py-1 rounded text-xs font-bold uppercase text-white ${video.type === 'youtube' ? 'bg-red-600' : 'bg-blue-600'}`}>
-                       {video.type}
+                       {video.type === 'youtube' ? 'YT' : 'File'}
                      </span>
                   </div>
                 </div>
