@@ -9,20 +9,18 @@ import {
   Loader2, 
   Tags, 
   Save, 
-  FileText, 
   Trash2, 
-  Clock, 
-  AlertTriangle, 
+  CheckCircle,
+  History,
+  PenLine,
+  ChevronDown,
+  ChevronUp,
   Film, 
   Link as LinkIcon, 
   Globe, 
   Layout, 
   Type, 
-  CheckCircle,
-  History,
-  PenLine,
-  ChevronDown,
-  ChevronUp
+  Eye
 } from 'lucide-react';
 
 interface AdminEditorProps {
@@ -103,7 +101,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
     const btn = document.getElementById('save-draft-btn');
     if(btn) {
        const originalText = btn.innerHTML;
-       btn.innerHTML = '<span class="flex items-center gap-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Saved</span>';
+       btn.innerHTML = '<span class="flex items-center gap-2">Saved</span>';
        setTimeout(() => btn.innerHTML = originalText, 2000);
     }
   };
@@ -187,9 +185,9 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto">
+    <div className="max-w-[1600px] mx-auto pb-20">
       {/* Header */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-10 bg-white/80 backdrop-blur-md py-4 border-b border-slate-100">
         <div>
            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
              <PenLine className="text-blue-600" />
@@ -224,29 +222,31 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
         <div className="lg:col-span-2 space-y-6">
           
           {/* AI Copilot Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 overflow-hidden relative group">
             <div 
-              className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center justify-between cursor-pointer"
+              className="p-4 flex items-center justify-between cursor-pointer"
               onClick={() => setShowAiPanel(!showAiPanel)}
             >
-               <div className="flex items-center gap-2 text-blue-800 font-semibold">
-                  <Sparkles size={18} className="text-blue-600" />
+               <div className="flex items-center gap-2 text-blue-900 font-semibold">
+                  <div className="bg-white p-1.5 rounded-lg shadow-sm">
+                    <Sparkles size={18} className="text-blue-600" />
+                  </div>
                   AI Copilot
                </div>
                {showAiPanel ? <ChevronUp size={18} className="text-blue-400" /> : <ChevronDown size={18} className="text-blue-400" />}
             </div>
             
             {showAiPanel && (
-              <div className="p-6 animate-in slide-in-from-top-2 duration-300">
-                <div className="flex gap-2 mb-4">
+              <div className="px-6 pb-6 animate-in slide-in-from-top-2 duration-300">
+                <div className="flex gap-2 mb-4 bg-white/60 p-1 rounded-lg inline-flex">
                   {['topic', 'url'].map((mode) => (
                     <button
                       key={mode}
                       onClick={() => { setInputMode(mode as 'topic' | 'url'); setInputValue(''); }}
-                      className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all ${
+                      className={`py-1.5 px-4 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${
                           inputMode === mode
-                            ? 'bg-blue-600 text-white border-blue-600' 
-                            : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                            ? 'bg-white text-blue-700 shadow-sm' 
+                            : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
                         {mode === 'topic' ? 'Generate from Topic' : 'Import from URL'}
@@ -254,68 +254,65 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
                   ))}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 relative">
                   <input
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     placeholder={inputMode === 'topic' ? "What's happening? e.g., 'New breakthrough in fusion energy...'" : "https://example.com/article-to-import"}
-                    className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="flex-1 px-4 py-3 bg-white border-0 shadow-sm rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all text-sm pr-32"
                   />
-                  <button
-                    onClick={handleGenerate}
-                    disabled={isGenerating || !inputValue.trim()}
-                    className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 font-medium shadow-md flex items-center gap-2 whitespace-nowrap"
-                  >
-                    {isGenerating ? <Loader2 className="animate-spin" size={18} /> : (inputMode === 'url' ? <LinkIcon size={18} /> : <Sparkles size={18} />)}
-                    {inputMode === 'url' ? 'Fetch' : 'Generate'}
-                  </button>
+                  <div className="absolute right-1 top-1 bottom-1">
+                    <button
+                        onClick={handleGenerate}
+                        disabled={isGenerating || !inputValue.trim()}
+                        className="h-full px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium shadow-sm flex items-center gap-2 whitespace-nowrap transition-all"
+                    >
+                        {isGenerating ? <Loader2 className="animate-spin" size={16} /> : (inputMode === 'url' ? <LinkIcon size={16} /> : <Sparkles size={16} />)}
+                        {isGenerating ? 'Working...' : (inputMode === 'url' ? 'Fetch' : 'Generate')}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
           {/* Document Editor */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 min-h-[600px]">
-            <div className="space-y-6">
-               {/* Title Input */}
-               <div>
-                  <input
-                    type="text"
-                    required
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Article Headline"
-                    className="w-full text-4xl font-black font-serif placeholder:text-slate-300 border-none focus:ring-0 p-0 text-slate-900 leading-tight"
-                  />
-               </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 min-h-[700px] flex flex-col">
+             {/* Title Input */}
+             <div className="mb-6">
+                <input
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Add Title Here..."
+                className="w-full text-4xl sm:text-5xl font-black font-serif placeholder:text-slate-200 border-none focus:ring-0 p-0 text-slate-900 leading-tight bg-transparent"
+                />
+             </div>
 
-               {/* Summary Input */}
-               <div className="relative">
-                  <Type className="absolute left-0 top-3 text-slate-300" size={20} />
-                  <textarea
-                    required
-                    rows={2}
-                    value={formData.summary}
-                    onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-                    placeholder="Write a short, catchy summary..."
-                    className="w-full pl-8 py-2 text-lg text-slate-600 font-medium placeholder:text-slate-300 border-none focus:ring-0 p-0 resize-none bg-transparent"
-                  />
-               </div>
+             {/* Summary Input */}
+             <div className="relative mb-8 pl-4 border-l-4 border-slate-100">
+                <textarea
+                required
+                rows={2}
+                value={formData.summary}
+                onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
+                placeholder="Write a compelling summary..."
+                className="w-full text-lg text-slate-600 font-medium placeholder:text-slate-300 border-none focus:ring-0 p-0 resize-none bg-transparent italic"
+                />
+             </div>
 
-               <hr className="border-slate-100" />
-
-               {/* Main Content */}
-               <div className="relative h-full">
-                  <textarea
-                    required
-                    value={formData.content}
-                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                    placeholder="Start writing your story here... HTML tags are supported for formatting."
-                    className="w-full h-[500px] text-lg leading-relaxed text-slate-800 font-serif placeholder:text-slate-200 border-none focus:ring-0 p-0 resize-none"
-                  />
-               </div>
-            </div>
+             {/* Main Content */}
+             <div className="flex-1 relative">
+                <textarea
+                required
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                placeholder="Start writing your story..."
+                className="w-full h-full min-h-[400px] text-lg leading-relaxed text-slate-800 font-serif placeholder:text-slate-200 border-none focus:ring-0 p-0 resize-none bg-transparent"
+                />
+             </div>
           </div>
         </div>
 
@@ -323,18 +320,18 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
         {/* RIGHT COLUMN: Sidebar Settings */}
         <div className="space-y-6">
           
-          {/* Article Settings Card */}
+          {/* Organization Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-             <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-sm flex items-center gap-2">
-                <Layout size={16} /> Organization
+             <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
+                <Layout size={14} /> Content Details
              </div>
              <div className="p-4 space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Category</label>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Category</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as Category })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 text-sm font-medium"
                   >
                     {CATEGORIES.filter(c => c !== 'For You').map((cat) => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -342,7 +339,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tags</label>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Tags</label>
                   <div className="relative">
                     <Tags className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                     <input
@@ -350,7 +347,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
                       value={formData.tags}
                       onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                       placeholder="Tech, Future, AI..."
-                      className="w-full pl-9 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      className="w-full pl-9 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50"
                     />
                   </div>
                 </div>
@@ -359,44 +356,42 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
 
           {/* Media Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-             <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-sm flex items-center gap-2">
-                <ImageIcon size={16} /> Media
+             <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
+                <ImageIcon size={14} /> Featured Media
              </div>
              <div className="p-4 space-y-4">
-                <div>
-                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Featured Image</label>
-                   
-                   {/* Image Preview */}
-                   <div className="mb-3 w-full aspect-video bg-slate-100 rounded-lg overflow-hidden border border-slate-200 relative group">
-                      <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button 
-                            type="button"
-                            onClick={() => setFormData({...formData, imageUrl: `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 1000)}`})}
-                            className="px-3 py-1 bg-white rounded-full text-xs font-bold hover:bg-slate-100"
-                          >
-                            New Random Image
-                          </button>
-                      </div>
-                   </div>
+                 {/* Image Preview */}
+                 <div className="w-full aspect-video bg-slate-100 rounded-lg overflow-hidden border border-slate-200 relative group">
+                    <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                        type="button"
+                        onClick={() => setFormData({...formData, imageUrl: `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 1000)}`})}
+                        className="px-3 py-1.5 bg-white rounded-full text-xs font-bold hover:bg-slate-100 flex items-center gap-1 shadow-lg"
+                        >
+                        <Sparkles size={12} /> Randomize
+                        </button>
+                    </div>
+                 </div>
 
-                   <input
-                      type="text"
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs text-slate-600"
-                      placeholder="https://..."
-                   />
-                </div>
+                 <input
+                    type="text"
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs text-slate-600 bg-slate-50"
+                    placeholder="https://image-url.com..."
+                 />
 
+                <hr className="border-slate-100" />
+                
                 <div>
-                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Linked Video</label>
+                   <label className="block text-xs font-semibold text-slate-500 mb-1.5">Link a Video</label>
                    <div className="relative">
                      <Film className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                      <select
                        value={formData.linkedVideoId}
                        onChange={(e) => setFormData({...formData, linkedVideoId: e.target.value})}
-                       className="w-full pl-9 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm appearance-none"
+                       className="w-full pl-9 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 text-sm appearance-none"
                      >
                        <option value="">No Video Linked</option>
                        {videos.map(video => (
@@ -410,14 +405,14 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
              </div>
           </div>
 
-          {/* Attribution & Meta */}
+          {/* Publishing Options */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-             <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-sm flex items-center gap-2">
-                <Globe size={16} /> Attribution
+             <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
+                <Globe size={14} /> Visibility
              </div>
              <div className="p-4 space-y-4">
                 <div>
-                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Source URL</label>
+                   <label className="block text-xs font-semibold text-slate-500 mb-1.5">Source URL</label>
                    <div className="relative">
                       <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                       <input
@@ -425,24 +420,19 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
                         value={formData.sourceUrl}
                         onChange={(e) => setFormData({ ...formData, sourceUrl: e.target.value })}
                         placeholder="Original article link..."
-                        className="w-full pl-9 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                        className="w-full pl-9 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50"
                       />
                    </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100">
-                    <label className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-50 rounded-lg transition-colors">
-                      <div className={`w-5 h-5 rounded border flex items-center justify-center ${formData.isBreaking ? 'bg-red-600 border-red-600' : 'bg-white border-slate-300'}`}>
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100 cursor-pointer" onClick={() => setFormData({...formData, isBreaking: !formData.isBreaking})}>
+                     <div>
+                        <div className="text-sm font-bold text-red-900">Breaking News</div>
+                        <div className="text-xs text-red-700 opacity-80">Boosts visibility in feed</div>
+                     </div>
+                     <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${formData.isBreaking ? 'bg-red-600 border-red-600' : 'bg-white border-red-200'}`}>
                          {formData.isBreaking && <CheckCircle size={14} className="text-white" />}
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={formData.isBreaking}
-                        onChange={(e) => setFormData({...formData, isBreaking: e.target.checked})}
-                        className="hidden"
-                      />
-                      <span className={`text-sm font-medium ${formData.isBreaking ? 'text-red-600' : 'text-slate-600'}`}>Mark as Breaking News</span>
-                    </label>
+                     </div>
                 </div>
              </div>
           </div>
@@ -450,8 +440,8 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
           {/* Draft History */}
           {drafts.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 font-semibold text-amber-800 text-sm flex items-center gap-2">
-                <History size={16} /> Saved Drafts
+              <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 font-semibold text-amber-800 text-xs uppercase tracking-wider flex items-center gap-2">
+                <History size={14} /> Saved Drafts
               </div>
               <div className="max-h-48 overflow-y-auto">
                  {drafts.map(draft => (

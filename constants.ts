@@ -45,6 +45,28 @@ export const MOCK_VIDEOS: Video[] = [
 
 export const MOCK_ARTICLES: Article[] = [
   {
+    id: 'founder-story',
+    title: 'Meet the Visionary Developer Behind Big News',
+    summary: 'The founder of Big News and CEO of Mova AI is redefining how the world consumes information.',
+    content: `
+      <p><strong>Exclusive Interview</strong> — In a world saturated with information, one developer dared to reimagine how we consume news. Meet the founder of Big News, a visionary tech leader who turned a simple idea into a global platform.</p>
+      <p>"Our goal was never just to aggregate headlines," says the founder, pictured in his high-rise office overlooking the city skyline. "It was to create an ecosystem where technology helps users cut through the noise to find the stories that truly matter."</p>
+      <p>With a background in advanced machine learning and a passion for journalism, he built Big News from the ground up. The platform now serves millions of users, offering personalized feeds and real-time updates powered by cutting-edge algorithms.</p>
+      <p>Also serving as the CEO of <strong>Mova AI</strong>, his dual expertise in artificial intelligence and media technology places Big News at the forefront of the industry's evolution. "We are just getting started," he adds, hinting at new features coming later this year.</p>
+    `,
+    category: 'Technology',
+    author: 'Big News Staff',
+    // Using a professional placeholder that matches the description (Man in suit, office, skyline)
+    imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
+    publishedAt: new Date().toISOString(),
+    tags: ['Founder', 'Technology', 'Innovation', 'Leadership', 'Mova AI'],
+    views: 250000,
+    likes: 15400,
+    comments: 230,
+    userComments: [],
+    isBreaking: true, // This ensures it appears in the sliding banner
+  },
+  {
     id: '1',
     title: 'The Future of Quantum Computing',
     summary: 'Scientists make a breakthrough in stable qubits, paving the way for faster processing.',
@@ -125,7 +147,7 @@ export const MOCK_ARTICLES: Article[] = [
     likes: 3200,
     comments: 0,
     userComments: [],
-    isBreaking: true,
+    isBreaking: false, // Changed from true to false so the founder story takes precedence in single-item banners
   },
   {
     id: '4',

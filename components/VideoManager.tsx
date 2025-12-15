@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Video } from '../types';
-import { Youtube, Upload, Trash2, Plus, Film, ExternalLink, PlayCircle, FileVideo, CheckCircle2, X } from 'lucide-react';
+import { Youtube, Upload, Trash2, Plus, Film, PlayCircle, FileVideo, X } from 'lucide-react';
 
 interface VideoManagerProps {
   videos: Video[];
@@ -29,13 +29,11 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Basic validation
       if (!file.type.startsWith('video/')) {
         alert('Please select a valid video file.');
         return;
       }
       setUploadFile(file);
-      // Auto-set title from filename if empty
       if (!title) {
         setTitle(file.name.replace(/\.[^/.]+$/, ""));
       }
@@ -74,7 +72,6 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
       setTimeout(() => {
         clearInterval(interval);
         // Create a local blob URL for the file
-        // Note: In a real app, this is where you'd get the URL from your S3 bucket/backend
         const blobUrl = URL.createObjectURL(uploadFile);
         publishVideo(blobUrl);
         setIsUploading(false);
@@ -100,7 +97,6 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
     setTitle('');
     setUrl('');
     setThumbnailUrl('');
-    // alert('Video added successfully!'); 
   };
 
   const handleDeleteVideo = (id: string) => {
@@ -238,20 +234,6 @@ const VideoManager: React.FC<VideoManagerProps> = ({ videos, onUpdateVideos }) =
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Optional Thumbnail for Uploads */}
-            {activeTab === 'upload' && !isUploading && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Thumbnail URL (Optional)</label>
-                <input
-                  type="text"
-                  value={thumbnailUrl}
-                  onChange={(e) => setThumbnailUrl(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                />
               </div>
             )}
 

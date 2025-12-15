@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Article, UserPreferences, Comment, MonetizationConfig, Video } from '../types';
-import { X, Clock, User, Tag, Hash, Link, Check, Share2, Mail, Heart, MessageSquare, Send, Play, Film, ExternalLink, Edit2, Save } from 'lucide-react';
+import { X, Clock, User, Tag, Hash, Link, Check, Share2, Mail, Heart, MessageSquare, Send, Play, Film, ExternalLink, Edit2, Save, Reply } from 'lucide-react';
 import AdUnit from './AdUnit';
 import Logo from './Logo';
 
@@ -444,7 +445,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
                              {comment.user.charAt(0)}
                            </div>
                          )}
-                         <div>
+                         <div className="flex-1">
                             <div className="flex items-baseline gap-2 mb-1">
                                <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{comment.user}</span>
                                <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
@@ -452,6 +453,13 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
                                </span>
                             </div>
                             <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{comment.text}</p>
+                            
+                            <button 
+                                onClick={() => setNewComment(`@${comment.user} `)}
+                                className={`mt-2 flex items-center gap-1.5 text-xs font-medium transition-colors ${isDark ? 'text-slate-500 hover:text-blue-400' : 'text-slate-500 hover:text-blue-600'}`}
+                            >
+                                <Reply size={14} /> Reply
+                            </button>
                          </div>
                       </div>
                     ))

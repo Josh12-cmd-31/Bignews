@@ -123,7 +123,6 @@ const UserUploadModal: React.FC<{ isOpen: boolean, onClose: () => void, onUpload
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const [duration, setDuration] = useState<number | null>(null);
-  const videoPreviewRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -145,7 +144,7 @@ const UserUploadModal: React.FC<{ isOpen: boolean, onClose: () => void, onUpload
       return;
     }
 
-    if (selectedFile.size > 50 * 1024 * 1024) { // 50MB limit logic
+    if (selectedFile.size > 50 * 1024 * 1024) { // 50MB limit
       setError('File size too large. Max 50MB.');
       return;
     }
@@ -190,7 +189,7 @@ const UserUploadModal: React.FC<{ isOpen: boolean, onClose: () => void, onUpload
           title,
           type: 'upload',
           url: blobUrl,
-          thumbnail: '', // Could generate from video, but skipping for simplicity
+          thumbnail: '', 
           views: 0,
           likes: 0
        };
@@ -304,7 +303,7 @@ const ScrollableFeed: React.FC<{ videos: Video[], initialIndex: number, onClose:
   useEffect(() => {
     const options = {
       root: containerRef.current,
-      threshold: 0.7, // High threshold for "snap" feeling
+      threshold: 0.7, 
     };
 
     const observer = new IntersectionObserver((entries) => {
@@ -344,7 +343,7 @@ const ScrollableFeed: React.FC<{ videos: Video[], initialIndex: number, onClose:
            Shorts
         </div>
         <div className="w-10">
-           {/* Placeholder or Action */}
+           {/* Placeholder */}
         </div>
       </div>
 

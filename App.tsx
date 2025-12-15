@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Article, Category, UserPreferences, MonetizationConfig, Video } from './types';
 import { MOCK_ARTICLES, CATEGORIES, MOCK_VIDEOS } from './constants';
 import AdminEditor from './components/AdminEditor';
@@ -16,6 +16,9 @@ import VideoManager from './components/VideoManager';
 import VideoFeed from './components/VideoFeed';
 import Logo from './components/Logo';
 import { Newspaper, LayoutGrid, Menu, X, Shield, Search, BarChart3, PenTool, ChevronLeft, ChevronRight, LogOut, Lock, MessageSquarePlus, Settings, DollarSign, Film } from 'lucide-react';
+
+// Security constant: Auto-logout after 15 minutes of inactivity
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000; 
 
 const App: React.FC = () => {
   // Auth State
@@ -55,6 +58,43 @@ const App: React.FC = () => {
     adsenseEnabled: false,
     monetagEnabled: false
   });
+
+  // Session Timeout Logic
+  const sessionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetSessionTimer = () => {
+    if (!isAuthenticated) return;
+    
+    if (sessionTimerRef.current) {
+      clearTimeout(sessionTimerRef.current);
+    }
+    
+    sessionTimerRef.current = setTimeout(() => {
+      handleLogout();
+      alert("Session expired due to inactivity. Please log in again.");
+    }, SESSION_TIMEOUT_MS);
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Add event listeners for activity
+      window.addEventListener('mousemove', resetSessionTimer);
+      window.addEventListener('keypress', resetSessionTimer);
+      window.addEventListener('click', resetSessionTimer);
+      window.addEventListener('scroll', resetSessionTimer);
+      
+      resetSessionTimer(); // Start timer
+    }
+
+    return () => {
+      if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
+      window.removeEventListener('mousemove', resetSessionTimer);
+      window.removeEventListener('keypress', resetSessionTimer);
+      window.removeEventListener('click', resetSessionTimer);
+      window.removeEventListener('scroll', resetSessionTimer);
+    };
+  }, [isAuthenticated]);
+
 
   // Load from local storage on mount
   useEffect(() => {
@@ -151,6 +191,7 @@ const App: React.FC = () => {
     setIsAuthenticated(false);
     setShowAdminDashboard(false);
     setSelectedCategory('For You');
+    if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
   };
 
   const handlePublish = (article: Article) => {

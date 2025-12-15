@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Article, Category } from '../types';
-import { BarChart3, TrendingUp, Users, Heart, MessageSquare, Globe, Smartphone, Monitor, Tablet, Clock, MousePointerClick, Activity } from 'lucide-react';
+import { Article } from '../types';
+import { BarChart3, TrendingUp, Users, Heart, MessageSquare, Globe, Smartphone, Monitor, Tablet, Clock, MousePointerClick, Activity, Wallet, DollarSign, ArrowUpRight, CreditCard, Lock } from 'lucide-react';
 
 interface AnalyticsDashboardProps {
   articles: Article[];
@@ -13,20 +13,25 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ articles }) => 
   const totalComments = articles.reduce((sum, article) => sum + (article.comments || 0), 0);
   const avgViews = Math.round(totalViews / (articles.length || 1));
 
-  // --- Visitor Estimates (Simulated based on Article View Data) ---
-  // Assuming avg 2.5 page views per visitor
+  // --- Earnings Logic ---
+  // Mock CPM (Cost Per Mille) - $2.50 per 1000 views
+  const CPM = 2.50;
+  const totalEarnings = (totalViews / 1000) * CPM;
+  const todayViews = Math.round(totalViews * 0.15); // Assume 15% of views are from today
+  const todayEarnings = (todayViews / 1000) * CPM;
+  const pendingPayout = totalEarnings * 0.8; // 80% is withdrawable
+
+  // --- Visitor Estimates ---
   const estimatedVisitors = Math.round(totalViews / 2.5); 
-  const bounceRate = 42; // Hardcoded mock
-  const avgSessionDuration = "4m 12s"; // Hardcoded mock
+  const bounceRate = 42; 
+  const avgSessionDuration = "4m 12s";
   
-  // Sort articles by engagement (Likes + Comments)
   const topArticles = [...articles].sort((a, b) => {
     const engagementA = (a.likes || 0) + (a.comments || 0);
     const engagementB = (b.likes || 0) + (b.comments || 0);
     return engagementB - engagementA;
   }).slice(0, 5);
 
-  // Calculate views by category
   const viewsByCategory: Record<string, number> = {};
   articles.forEach(article => {
     if (!viewsByCategory[article.category]) {
@@ -36,14 +41,71 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ articles }) => 
   });
 
   const maxCategoryViews = Math.max(...Object.values(viewsByCategory), 1);
-
-  // Mock Data for Traffic Trend (Last 7 Days)
-  const trafficTrend = [65, 59, 80, 81, 56, 95, 100]; // Percentages relative to max
+  const trafficTrend = [65, 59, 80, 81, 56, 95, 100]; 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       
+      {/* Wallet / Earnings Section (New) */}
+      <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8 rounded-2xl shadow-xl border border-slate-700 relative overflow-hidden">
+         {/* Background Decoration */}
+         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-500 rounded-full blur-[100px] opacity-20"></div>
+         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-purple-500 rounded-full blur-[100px] opacity-20"></div>
+
+         <div className="relative z-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+               <div>
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                     <Wallet className="text-emerald-400" />
+                     Publisher Wallet
+                  </h2>
+                  <p className="text-slate-400 text-sm mt-1">Real-time revenue tracking from ad impressions.</p>
+               </div>
+               <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2">
+                  <CreditCard size={18} /> Withdraw Funds
+               </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+               {/* Today's Earnings */}
+               <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10">
+                  <div className="flex justify-between items-start mb-4">
+                     <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+                        <Activity size={20} />
+                     </div>
+                     <span className="text-xs font-medium bg-green-500/20 text-green-400 px-2 py-1 rounded-full">+12%</span>
+                  </div>
+                  <div className="text-slate-400 text-sm font-medium mb-1">Today's Revenue</div>
+                  <div className="text-3xl font-black tracking-tight">${todayEarnings.toFixed(2)}</div>
+               </div>
+
+               {/* Total Balance */}
+               <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10">
+                  <div className="flex justify-between items-start mb-4">
+                     <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400">
+                        <DollarSign size={20} />
+                     </div>
+                  </div>
+                  <div className="text-slate-400 text-sm font-medium mb-1">Total Balance</div>
+                  <div className="text-3xl font-black tracking-tight">${totalEarnings.toFixed(2)}</div>
+               </div>
+
+               {/* Payout Status */}
+               <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10">
+                  <div className="flex justify-between items-start mb-4">
+                     <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400">
+                        <Lock size={20} />
+                     </div>
+                     <span className="text-xs font-medium text-slate-400">Next Payout: 1st</span>
+                  </div>
+                  <div className="text-slate-400 text-sm font-medium mb-1">Pending Clearance</div>
+                  <div className="text-3xl font-black tracking-tight">${pendingPayout.toFixed(2)}</div>
+               </div>
+            </div>
+         </div>
+      </div>
+
       {/* Content Performance Section */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
@@ -243,31 +305,6 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ articles }) => 
                        <div className="h-full bg-purple-500 rounded-full" style={{ width: '5%' }}></div>
                     </div>
                  </div>
-              </div>
-
-              {/* Geo Location Mini Table */}
-              <div className="mt-8 pt-6 border-t border-slate-100">
-                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Globe size={16} /> Top Locations
-                 </h3>
-                 <ul className="space-y-3">
-                    <li className="flex justify-between text-sm">
-                       <span className="text-slate-600">🇺🇸 United States</span>
-                       <span className="font-semibold text-slate-900">42%</span>
-                    </li>
-                    <li className="flex justify-between text-sm">
-                       <span className="text-slate-600">🇬🇧 United Kingdom</span>
-                       <span className="font-semibold text-slate-900">15%</span>
-                    </li>
-                    <li className="flex justify-between text-sm">
-                       <span className="text-slate-600">🇨🇦 Canada</span>
-                       <span className="font-semibold text-slate-900">12%</span>
-                    </li>
-                    <li className="flex justify-between text-sm">
-                       <span className="text-slate-600">🇩🇪 Germany</span>
-                       <span className="font-semibold text-slate-900">8%</span>
-                    </li>
-                 </ul>
               </div>
            </div>
         </div>
