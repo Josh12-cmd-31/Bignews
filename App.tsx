@@ -51,702 +51,438 @@ const App: React.FC = () => {
     fontSize: 'medium'
   });
 
-  // Monetization State
-  const [monetizationConfig, setMonetizationConfig] = useState<MonetizationConfig>({
+  // Monetization Config
+  const [monetization, setMonetization] = useState<MonetizationConfig>({
     adsenseId: '',
     monetagId: '',
     adsenseEnabled: false,
     monetagEnabled: false
   });
 
-  // Session Timeout Logic
-  const sessionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const resetSessionTimer = () => {
-    if (!isAuthenticated) return;
-    
-    if (sessionTimerRef.current) {
-      clearTimeout(sessionTimerRef.current);
-    }
-    
-    sessionTimerRef.current = setTimeout(() => {
-      handleLogout();
-      alert("Session expired due to inactivity. Please log in again.");
-    }, SESSION_TIMEOUT_MS);
-  };
-
+  // Track session for auto-logout
   useEffect(() => {
-    if (isAuthenticated) {
-      // Add event listeners for activity
-      window.addEventListener('mousemove', resetSessionTimer);
-      window.addEventListener('keypress', resetSessionTimer);
-      window.addEventListener('click', resetSessionTimer);
-      window.addEventListener('scroll', resetSessionTimer);
-      
-      resetSessionTimer(); // Start timer
-    }
+    let timeoutId: number;
+    const resetTimer = () => {
+      if (isAuthenticated) {
+        clearTimeout(timeoutId);
+        timeoutId = window.setTimeout(() => {
+          setIsAuthenticated(false);
+          setShowAdminDashboard(false);
+          alert('Session expired for security. Please log in again.');
+        }, SESSION_TIMEOUT_MS);
+      }
+    };
+
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keypress', resetTimer);
+    resetTimer();
 
     return () => {
-      if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
-      window.removeEventListener('mousemove', resetSessionTimer);
-      window.removeEventListener('keypress', resetSessionTimer);
-      window.removeEventListener('click', resetSessionTimer);
-      window.removeEventListener('scroll', resetSessionTimer);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keypress', resetTimer);
+      clearTimeout(timeoutId);
     };
   }, [isAuthenticated]);
 
-
-  // Load from local storage on mount
-  useEffect(() => {
-    const savedArticles = localStorage.getItem('bigNewsArticles');
-    if (savedArticles) {
-      setArticles(JSON.parse(savedArticles));
-    }
-
-    const savedVideos = localStorage.getItem('bigNewsVideos');
-    if (savedVideos) {
-      setVideos(JSON.parse(savedVideos));
-    }
-
-    const savedInterests = localStorage.getItem('bigNewsUserInterests');
-    if (savedInterests) {
-      try {
-        setUserInterests(JSON.parse(savedInterests));
-      } catch (e) {
-        console.error("Failed to parse user interests");
-      }
-    }
-
-    const savedPreferences = localStorage.getItem('bigNewsPreferences');
-    if (savedPreferences) {
-      try {
-        setPreferences(JSON.parse(savedPreferences));
-      } catch (e) {
-        console.error("Failed to parse preferences");
-      }
-    }
-
-    const savedMonetization = localStorage.getItem('bigNewsMonetization');
-    if (savedMonetization) {
-      try {
-        setMonetizationConfig(JSON.parse(savedMonetization));
-      } catch (e) {
-        console.error("Failed to parse monetization config");
-      }
-    }
-  }, []);
-
-  // Update body class for dark mode
+  // Handle Theme Preference
   useEffect(() => {
     if (preferences.theme === 'dark') {
-      document.body.classList.add('bg-slate-900');
-      document.body.classList.remove('bg-slate-50');
+      document.body.classList.add('bg-slate-900', 'text-slate-100');
+      document.body.classList.remove('bg-slate-50', 'text-slate-900');
     } else {
-      document.body.classList.add('bg-slate-50');
-      document.body.classList.remove('bg-slate-900');
+      document.body.classList.add('bg-slate-50', 'text-slate-900');
+      document.body.classList.remove('bg-slate-900', 'text-slate-100');
     }
-    // Persist changes
-    localStorage.setItem('bigNewsPreferences', JSON.stringify(preferences));
-  }, [preferences]);
-
-  // Handle Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Admin Login Shortcut: Ctrl + Shift + L
-      if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
-        e.preventDefault();
-        if (!isAuthenticated) {
-           setIsLoginModalOpen(true);
-        } else {
-           setShowAdminDashboard(prev => !prev);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAuthenticated]);
-
-  // Reset pagination when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory, searchQuery]);
-
-  // Lock body scroll when mobile menu is open
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => { document.body.style.overflow = 'unset'; };
-  }, [isMobileMenuOpen]);
-
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true);
-    setShowAdminDashboard(true);
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setShowAdminDashboard(false);
-    setSelectedCategory('For You');
-    if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
-  };
-
-  const handlePublish = (article: Article) => {
-    const updatedArticles = [article, ...articles];
-    setArticles(updatedArticles);
-    localStorage.setItem('bigNewsArticles', JSON.stringify(updatedArticles));
-  };
-
-  const handleUpdateArticle = (updatedArticle: Article) => {
-    const updatedArticles = articles.map(a => a.id === updatedArticle.id ? updatedArticle : a);
-    setArticles(updatedArticles);
-    localStorage.setItem('bigNewsArticles', JSON.stringify(updatedArticles));
-    
-    // Also update selectedArticle if it matches to ensure modal stays in sync
-    if (selectedArticle && selectedArticle.id === updatedArticle.id) {
-      setSelectedArticle(updatedArticle);
-    }
-  };
-
-  const handleUpdateVideos = (updatedVideos: Video[]) => {
-    setVideos(updatedVideos);
-    localStorage.setItem('bigNewsVideos', JSON.stringify(updatedVideos));
-  };
-  
-  // Allow users to upload video from feed
-  const handleUserVideoUpload = (newVideo: Video) => {
-    const updatedVideos = [newVideo, ...videos];
-    setVideos(updatedVideos);
-    localStorage.setItem('bigNewsVideos', JSON.stringify(updatedVideos));
-  };
-
-  const handleUpdateMonetization = (config: MonetizationConfig) => {
-    setMonetizationConfig(config);
-    localStorage.setItem('bigNewsMonetization', JSON.stringify(config));
-  };
+  }, [preferences.theme]);
 
   const handleArticleClick = (article: Article) => {
     setSelectedArticle(article);
-    
-    // Update user interests for personalization
-    const newInterests = { 
-      ...userInterests, 
-      [article.category]: (userInterests[article.category] || 0) + 1 
-    };
-    setUserInterests(newInterests);
-    localStorage.setItem('bigNewsUserInterests', JSON.stringify(newInterests));
-    
-    // Increment views locally
-    const updatedArticles = articles.map(a => 
-      a.id === article.id ? { ...a, views: (a.views || 0) + 1 } : a
-    );
-    setArticles(updatedArticles);
-    localStorage.setItem('bigNewsArticles', JSON.stringify(updatedArticles));
+    // Track interest for personalization
+    setUserInterests(prev => ({
+      ...prev,
+      [article.category]: (prev[article.category] || 0) + 1
+    }));
   };
 
-  const getProcessedArticles = () => {
-    let result = articles;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(article => 
-        article.title.toLowerCase().includes(query) || 
-        article.content.toLowerCase().includes(query) ||
-        article.summary.toLowerCase().includes(query) ||
-        (article.tags && article.tags.some(tag => tag.toLowerCase().includes(query)))
-      );
-    }
-
-    if (selectedCategory !== 'For You' && selectedCategory !== 'Videos') {
-      result = result.filter(article => article.category === selectedCategory);
-    }
-
-    result = [...result].sort((a, b) => {
-      if (a.isBreaking && !b.isBreaking) return -1;
-      if (!a.isBreaking && b.isBreaking) return 1;
-
-      if (selectedCategory === 'For You') {
-        const interestA = userInterests[a.category] || 0;
-        const interestB = userInterests[b.category] || 0;
-        const scoreA = (interestA * 1000) + (a.views || 0);
-        const scoreB = (interestB * 1000) + (b.views || 0);
-        return scoreB - scoreA;
-      } else {
-        return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-      }
+  const filteredArticles = articles
+    .filter(a => {
+      const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          a.summary.toLowerCase().includes(searchQuery.toLowerCase());
+      if (selectedCategory === 'For You') return matchesSearch;
+      if (selectedCategory === 'Videos') return false;
+      return a.category === selectedCategory && matchesSearch;
+    })
+    .sort((a, b) => {
+       if (selectedCategory === 'For You') {
+         // Sort by interest score, then date
+         const scoreA = userInterests[a.category] || 0;
+         const scoreB = userInterests[b.category] || 0;
+         if (scoreA !== scoreB) return scoreB - scoreA;
+       }
+       return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
     });
 
-    return result;
-  };
-
-  const processedArticles = getProcessedArticles();
-  const totalPages = Math.ceil(processedArticles.length / ITEMS_PER_PAGE);
-  const paginatedArticles = processedArticles.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE, 
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  const isDark = preferences.theme === 'dark';
+  const totalPages = Math.ceil(filteredArticles.length / ITEMS_PER_PAGE);
+  const currentArticles = filteredArticles.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
-    <div className={`min-h-screen relative transition-colors duration-300 ${isDark ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-      {/* Watermark */}
-      <div className="fixed bottom-0 right-0 p-4 sm:p-10 pointer-events-none z-0 opacity-[0.03] select-none overflow-hidden">
-        <span className={`text-[12vw] font-black leading-none tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>BIG NEWS</span>
-      </div>
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${preferences.theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'}`}>
+      
+      <BreakingNewsBanner articles={articles} onArticleClick={handleArticleClick} />
 
-      {/* Sticky Header Group: Banner + Nav + Category Bar */}
-      <div className="sticky top-0 z-40 w-full flex flex-col shadow-sm">
-        <BreakingNewsBanner articles={articles} onArticleClick={handleArticleClick} />
+      {/* Navigation Header */}
+      <header className={`sticky top-0 z-40 border-b transition-all ${preferences.theme === 'dark' ? 'bg-slate-950/80 border-slate-800' : 'bg-white/80 border-slate-200'} backdrop-blur-md`}>
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+             <button 
+               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+               className={`lg:hidden p-2 rounded-lg ${preferences.theme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}
+             >
+               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+             </button>
+             <Logo isDark={preferences.theme === 'dark'} />
+          </div>
 
-        {/* Navigation Bar */}
-        <nav className={`transition-colors duration-300 w-full ${isDark ? 'bg-slate-900 border-b border-slate-800' : 'bg-white border-b border-slate-200'}`}>
-          <div className="max-w-[1920px] mx-auto px-3 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16 gap-2">
-              
-              {/* Left: Logo & Mobile Menu */}
-              <div className="flex items-center gap-2 shrink-0">
-                <button 
-                  className={`md:hidden p-2 rounded-lg transition-colors active:bg-slate-200/20 ${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'}`}
-                  onClick={() => setIsMobileMenuOpen(true)}
-                  aria-label="Open menu"
-                >
-                  <Menu size={24} />
-                </button>
-                
-                <div 
-                  className="cursor-pointer"
-                  onClick={() => {
-                    if (isAuthenticated) {
-                      setShowAdminDashboard(false);
-                    }
-                    setSelectedCategory('For You');
-                    setSearchQuery('');
-                    setAdminTab('publisher');
-                  }}
-                >
-                  <Logo isDark={isDark} />
-                </div>
-              </div>
-
-              {/* Center: Search Bar (Responsive) */}
-              <div className="flex-1 max-w-lg flex items-center justify-end md:justify-center px-1 sm:px-4">
-                <div className="relative w-full max-w-[200px] sm:max-w-full group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search size={16} className={`transition-colors ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className={`block w-full pl-9 pr-3 py-2 sm:py-2 border rounded-full text-sm leading-5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-                      isDark 
-                        ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:bg-slate-700' 
-                        : 'bg-slate-100 border-transparent text-slate-900 placeholder-slate-500 focus:bg-white focus:border-slate-300'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Right: Actions */}
-              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                <button
-                  onClick={() => setIsSettingsModalOpen(true)}
-                  className={`p-2 rounded-full transition-colors active:scale-95 ${isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
-                  title="Settings"
-                  aria-label="Settings"
-                >
-                  <Settings size={22} />
-                </button>
-
-                {isAuthenticated && (
-                  <>
-                    <button
-                      onClick={() => setShowAdminDashboard(!showAdminDashboard)}
-                      className={`flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 ${
-                        showAdminDashboard 
-                          ? 'bg-blue-600 text-white' 
-                          : isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                      title="Dashboard"
-                    >
-                      <Shield size={20} className="sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline">
-                        {showAdminDashboard ? 'Dashboard Active' : 'Dashboard'}
-                      </span>
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className={`p-2 sm:px-3 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2 active:scale-95 ${
-                        isDark 
-                          ? 'text-slate-400 hover:bg-red-900/20 hover:text-red-400' 
-                          : 'text-slate-600 hover:bg-red-50 hover:text-red-600'
-                      }`}
-                      title="Logout"
-                    >
-                      <LogOut size={20} />
-                      <span className="hidden sm:inline">Logout</span>
-                    </button>
-                  </>
-                )}
-              </div>
+          {/* Search Bar (Desktop) */}
+          <div className="hidden md:flex flex-1 max-w-md mx-8">
+            <div className={`relative w-full ${preferences.theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" size={18} />
+              <input
+                type="text"
+                placeholder="Search headlines..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`w-full pl-10 pr-4 py-2 rounded-full border focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
+                    preferences.theme === 'dark' 
+                      ? 'bg-slate-900 border-slate-700 placeholder-slate-600 focus:bg-slate-800' 
+                      : 'bg-slate-100 border-slate-200 placeholder-slate-400 focus:bg-white'
+                }`}
+              />
             </div>
           </div>
-        </nav>
 
-        {/* Sliding Category Bar */}
-        {!showAdminDashboard && (
-          <div className={`w-full overflow-x-auto no-scrollbar border-b ${isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200'} backdrop-blur-sm transition-colors`}>
-            <div className="max-w-[1920px] mx-auto px-3 sm:px-6 lg:px-8">
-              <div className="flex items-center gap-2 sm:gap-4 py-3 min-w-max">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                       setSelectedCategory(cat);
-                       setShowAdminDashboard(false);
-                       window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className={`relative px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap active:scale-95 ${
-                       selectedCategory === cat
-                          ? (isDark ? 'bg-white text-slate-900 shadow-md' : 'bg-slate-900 text-white shadow-md')
-                          : (isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                       {cat === 'Videos' && <Film size={14} className={selectedCategory === cat ? 'animate-pulse' : ''} />}
-                       {cat}
-                    </span>
-                  </button>
-                ))}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button 
+              onClick={() => setIsSettingsModalOpen(true)}
+              className={`p-2 rounded-full transition-colors ${preferences.theme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}
+              title="Reading Settings"
+            >
+              <Settings size={22} />
+            </button>
+            <button 
+               onClick={() => setIsFeedbackModalOpen(true)}
+               className={`hidden sm:flex p-2 rounded-full transition-colors ${preferences.theme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}
+               title="Send Feedback"
+            >
+              <MessageSquarePlus size={22} />
+            </button>
+            <div className={`w-px h-6 mx-1 ${preferences.theme === 'dark' ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowAdminDashboard(!showAdminDashboard)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                    showAdminDashboard 
+                      ? 'bg-blue-600 text-white shadow-lg' 
+                      : (preferences.theme === 'dark' ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')
+                  }`}
+                >
+                  <Shield size={16} />
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => { setIsAuthenticated(false); setShowAdminDashboard(false); }}
+                  className={`p-2 rounded-full text-red-500 transition-colors ${preferences.theme === 'dark' ? 'hover:bg-red-900/20' : 'hover:bg-red-50'}`}
+                  title="Logout"
+                >
+                  <LogOut size={22} />
+                </button>
               </div>
-            </div>
+            ) : (
+              <button
+                onClick={() => setIsLoginModalOpen(true)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${
+                    preferences.theme === 'dark'
+                      ? 'bg-slate-800 text-slate-100 hover:bg-slate-700'
+                      : 'bg-slate-900 text-white hover:bg-slate-800 shadow-md'
+                }`}
+              >
+                <Lock size={14} />
+                Admin
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Categories Bar */}
+        {!showAdminDashboard && (
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+            <nav className="flex items-center space-x-1 overflow-x-auto no-scrollbar py-2 -mb-px">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setSelectedCategory(cat);
+                    setCurrentPage(1);
+                  }}
+                  className={`whitespace-nowrap px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-lg transition-all ${
+                    selectedCategory === cat
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : `hover:bg-slate-100 ${preferences.theme === 'dark' ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500'}`
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </nav>
           </div>
         )}
-      </div>
+      </header>
 
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10">
-        <div className="flex flex-col md:flex-row gap-8">
-          
-          {/* Sidebar (Desktop) - Kept as secondary nav for wider screens */}
-          <aside className="hidden md:block w-64 flex-shrink-0">
-            <div className="sticky top-48 space-y-4"> {/* Increased top value to account for double header */}
-              {isAuthenticated && showAdminDashboard ? (
-                // Admin Sidebar
-                <div className="space-y-1">
-                  <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Admin Tools
-                  </h3>
-                  {[
-                    { id: 'publisher', label: 'Publisher', icon: PenTool },
-                    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-                    { id: 'videos', label: 'Short Videos', icon: Film },
-                    { id: 'monetization', label: 'Monetization', icon: DollarSign },
-                  ].map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => setAdminTab(item.id as any)}
-                      className={`flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                        adminTab === item.id
-                          ? (isDark ? 'bg-slate-800 text-blue-400 shadow-sm ring-1 ring-slate-700' : 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200')
-                          : (isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                      }`}
-                    >
-                      <item.icon size={18} />
-                      <span>{item.label}</span>
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden animate-in fade-in duration-300">
+           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
+           <div className={`absolute left-0 top-0 bottom-0 w-4/5 max-w-xs shadow-2xl animate-in slide-in-from-left duration-300 ${preferences.theme === 'dark' ? 'bg-slate-900' : 'bg-white'}`}>
+              <div className="p-6">
+                 <div className="flex justify-between items-center mb-10">
+                    <Logo isDark={preferences.theme === 'dark'} />
+                    <button onClick={() => setIsMobileMenuOpen(false)} className={preferences.theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}>
+                       <X size={24} />
                     </button>
-                  ))}
-                </div>
-              ) : (
-                // Reader Sidebar (Ad slot focus, categories are now on top)
-                <div className="space-y-4">
-                  {/* Sidebar Ad Slot */}
-                  {(monetizationConfig.adsenseEnabled || monetizationConfig.monetagEnabled) && (
-                    <div className="pt-2 px-1">
-                       <AdUnit 
-                         type={monetizationConfig.monetagEnabled ? 'monetag' : 'adsense'} 
-                         id={monetizationConfig.monetagEnabled ? monetizationConfig.monetagId : monetizationConfig.adsenseId}
-                         preferences={preferences}
-                         label="Sponsored"
-                       />
-                    </div>
-                  )}
-                  
-                   <div className="px-4 py-6 rounded-xl border border-dashed text-center opacity-50 text-sm">
-                      <p className={isDark ? 'text-slate-500' : 'text-slate-400'}>
-                        Additional sidebar content, widgets, or trending topics can be placed here.
-                      </p>
-                   </div>
-                </div>
-              )}
-            </div>
-          </aside>
-
-          {/* Main Content Area */}
-          <main className="flex-1 min-w-0">
-            {isAuthenticated && showAdminDashboard ? (
-               // Admin View
-               <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
-                 {/* Mobile Tab Switcher for Admin */}
-                 <div className="md:hidden flex mb-6 bg-slate-200 dark:bg-slate-800 p-1 rounded-lg overflow-x-auto no-scrollbar">
-                    {[
-                      { id: 'publisher', label: 'Publisher' },
-                      { id: 'analytics', label: 'Analytics' },
-                      { id: 'videos', label: 'Videos' },
-                      { id: 'monetization', label: 'Monetize' },
-                    ].map((tab) => (
-                      <button 
-                        key={tab.id}
-                        onClick={() => setAdminTab(tab.id as any)}
-                        className={`flex-1 py-2 px-3 text-xs font-medium rounded-md transition-all whitespace-nowrap ${
-                          adminTab === tab.id 
-                            ? (isDark ? 'bg-slate-700 text-white shadow-sm' : 'bg-white shadow-sm text-slate-900') 
-                            : (isDark ? 'text-slate-400' : 'text-slate-500')
+                 </div>
+                 
+                 <div className="space-y-1">
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          setSelectedCategory(cat);
+                          setCurrentPage(1);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 rounded-xl font-bold uppercase tracking-widest text-sm transition-all ${
+                          selectedCategory === cat
+                            ? 'bg-blue-600 text-white'
+                            : (preferences.theme === 'dark' ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100')
                         }`}
                       >
-                        {tab.label}
+                        {cat}
                       </button>
                     ))}
                  </div>
 
-                 {adminTab === 'publisher' && (
-                    <AdminEditor onPublish={handlePublish} videos={videos} />
-                 )}
-                 {adminTab === 'analytics' && (
-                    <AnalyticsDashboard articles={articles} />
-                 )}
-                 {adminTab === 'monetization' && (
-                    <MonetizationPanel config={monetizationConfig} onUpdate={handleUpdateMonetization} />
-                 )}
-                 {adminTab === 'videos' && (
-                    <VideoManager videos={videos} onUpdateVideos={handleUpdateVideos} />
-                 )}
-               </div>
-            ) : (
-              // Reader View
-              <div className="animate-in fade-in duration-500">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-2">
-                  <div>
-                     <h2 className={`text-2xl sm:text-3xl font-bold font-serif ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                        {selectedCategory === 'For You' ? 'Top Stories For You' : selectedCategory}
-                     </h2>
-                     <p className={`text-sm sm:text-base mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        {selectedCategory === 'For You' 
-                          ? 'Curated based on your interests' 
-                          : `Latest updates in ${selectedCategory}`}
-                     </p>
-                  </div>
-                  <div className={`self-start sm:self-auto text-xs sm:text-sm font-medium px-3 py-1 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-                    {selectedCategory === 'Videos' ? `${videos.length} Videos` : `${processedArticles.length} Articles`}
-                  </div>
-                </div>
-
-                {/* Conditional Rendering: Video Feed or Article Feed */}
-                {selectedCategory === 'Videos' ? (
-                   <VideoFeed videos={videos} onUpload={handleUserVideoUpload} />
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                      {paginatedArticles.map((article, index) => (
-                        <React.Fragment key={article.id}>
-                           <NewsCard 
-                              article={article} 
-                              onClick={handleArticleClick} 
-                              preferences={preferences}
-                              onUpdateArticle={handleUpdateArticle}
-                           />
-                           {/* Inject Ad after every 4th article */}
-                           {(index + 1) % 4 === 0 && (monetizationConfig.adsenseEnabled || monetizationConfig.monetagEnabled) && (
-                              <div className="sm:col-span-2 lg:col-span-3">
-                                 <AdUnit 
-                                   type={monetizationConfig.monetagEnabled ? 'monetag' : 'adsense'} 
-                                   id={monetizationConfig.monetagEnabled ? monetizationConfig.monetagId : monetizationConfig.adsenseId}
-                                   preferences={preferences}
-                                 />
-                              </div>
-                           )}
-                        </React.Fragment>
-                      ))}
-                    </div>
-
-                    {/* Empty State */}
-                    {paginatedArticles.length === 0 && (
-                      <div className="text-center py-20 px-4">
-                        <p className="text-slate-500 text-lg">No articles found matching your criteria.</p>
-                        <button 
-                          onClick={() => {setSearchQuery(''); setSelectedCategory('For You');}}
-                          className="mt-4 text-blue-600 hover:underline font-medium"
-                        >
-                          Clear filters
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                      <div className="mt-8 sm:mt-12 flex justify-center items-center gap-2 sm:gap-4 pb-8">
-                        <button
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1}
-                          className={`p-2.5 rounded-lg border transition-all active:scale-95 ${
-                            currentPage === 1 
-                              ? 'opacity-50 cursor-not-allowed border-transparent' 
-                              : isDark 
-                                ? 'border-slate-700 hover:bg-slate-800 text-slate-300' 
-                                : 'border-slate-300 hover:bg-slate-50 text-slate-700'
-                          }`}
-                        >
-                          <ChevronLeft size={20} />
-                        </button>
-                        
-                        <div className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                          Page {currentPage} of {totalPages}
-                        </div>
-
-                        <button
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages}
-                          className={`p-2.5 rounded-lg border transition-all active:scale-95 ${
-                            currentPage === totalPages 
-                              ? 'opacity-50 cursor-not-allowed border-transparent' 
-                              : isDark 
-                                ? 'border-slate-700 hover:bg-slate-800 text-slate-300' 
-                                : 'border-slate-300 hover:bg-slate-50 text-slate-700'
-                          }`}
-                        >
-                          <ChevronRight size={20} />
-                        </button>
-                      </div>
-                    )}
-                    
-                    {/* Footer with Discreet Admin Login */}
-                    <footer className={`mt-16 py-8 border-t text-center ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-                      <p className={`text-sm mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                        &copy; {new Date().getFullYear()} Big News Inc. All rights reserved.
-                      </p>
-                      <button 
-                        onClick={() => setIsLoginModalOpen(true)}
-                        className={`text-xs font-medium transition-colors opacity-50 hover:opacity-100 ${isDark ? 'text-slate-700 hover:text-slate-500' : 'text-slate-300 hover:text-slate-500'}`}
-                      >
-                        Admin Login
-                      </button>
-                    </footer>
-                  </>
-                )}
-              </div>
-            )}
-          </main>
-        </div>
-      </div>
-
-      {/* Footer Feedback Button - Positioned safe from bottom bars */}
-      <div className="fixed bottom-6 right-4 sm:bottom-8 sm:right-8 z-30">
-        <button
-          onClick={() => setIsFeedbackModalOpen(true)}
-          className={`flex items-center gap-2 px-3 py-3 sm:px-4 rounded-full shadow-lg shadow-black/20 transition-all transform active:scale-95 ${
-            isDark 
-              ? 'bg-blue-600 text-white hover:bg-blue-700' 
-              : 'bg-slate-900 text-white hover:bg-slate-800'
-          }`}
-          aria-label="Give Feedback"
-        >
-          <MessageSquarePlus size={20} />
-          <span className="font-medium hidden sm:inline">Feedback</span>
-        </button>
-      </div>
-
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-            <div className="fixed inset-0 z-50 flex md:hidden">
-              <div 
-                className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
-                onClick={() => setIsMobileMenuOpen(false)}
-              />
-              <div className={`relative w-4/5 max-w-xs h-full shadow-2xl flex flex-col ${isDark ? 'bg-slate-900 border-r border-slate-800' : 'bg-white border-r border-slate-200'} animate-in slide-in-from-left duration-300`}>
-                  <div className="p-4 border-b border-slate-100/10 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Logo isDark={isDark} />
-                    </div>
+                 <hr className={`my-8 ${preferences.theme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`} />
+                 
+                 <div className="space-y-2">
                     <button 
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`p-2 rounded-md ${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
+                       onClick={() => { setIsMobileMenuOpen(false); setIsFeedbackModalOpen(true); }}
+                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${preferences.theme === 'dark' ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'}`}
                     >
-                        <X size={20} />
+                       <MessageSquarePlus size={20} /> Feedback
                     </button>
-                  </div>
-                  
-                  <div className="flex-1 overflow-y-auto py-4 px-4 space-y-4">
-                    {isAuthenticated && (
-                      <div className="mb-4 pb-4 border-b border-slate-100/10">
-                          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Admin</div>
-                          <button
-                            onClick={() => {
-                              setShowAdminDashboard(!showAdminDashboard);
-                              setIsMobileMenuOpen(false);
-                            }}
-                            className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg ${showAdminDashboard ? 'bg-blue-600 text-white' : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50')}`}
-                          >
-                            <Shield size={18} />
-                            {showAdminDashboard ? 'Switch to Reader' : 'Admin Dashboard'}
-                          </button>
-                      </div>
-                    )}
-                    
-                    <div>
-                       <h3 className="text-lg font-bold font-serif mb-2">Welcome</h3>
-                       <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                         Explore the latest news by swiping the topics bar at the top of the screen.
-                       </p>
-                    </div>
-
-                    <div className="pt-4">
-                       <button
-                        onClick={() => setIsSettingsModalOpen(true)}
-                        className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-lg transition-colors ${isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`}
-                       >
-                         <Settings size={18} />
-                         Settings
-                       </button>
-                    </div>
-                  </div>
-                  
-                  <div className={`p-4 border-t flex flex-col gap-2 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
-                    {!isAuthenticated && (
-                      <button 
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          setIsLoginModalOpen(true);
-                        }}
-                        className={`text-xs text-center font-medium ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-600'}`}
-                      >
-                        Admin Login
-                      </button>
-                    )}
-                    <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                      &copy; 2024 Big News Inc.
-                    </p>
-                  </div>
+                 </div>
               </div>
-            </div>
+           </div>
+        </div>
       )}
 
-      {/* Modals */}
+      {/* Main Content */}
+      <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        {showAdminDashboard ? (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Admin Header with Tabs */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
+               <h1 className="text-3xl font-black font-serif flex items-center gap-3">
+                 Admin Dashboard
+               </h1>
+               
+               <div className={`p-1 rounded-xl flex items-center ${preferences.theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                  <button 
+                    onClick={() => setAdminTab('publisher')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${adminTab === 'publisher' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    <PenTool size={16} /> Publisher
+                  </button>
+                  <button 
+                    onClick={() => setAdminTab('videos')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${adminTab === 'videos' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    <Film size={16} /> Videos
+                  </button>
+                  <button 
+                    onClick={() => setAdminTab('analytics')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${adminTab === 'analytics' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    <BarChart3 size={16} /> Analytics
+                  </button>
+                  <button 
+                    onClick={() => setAdminTab('monetization')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${adminTab === 'monetization' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    <DollarSign size={16} /> Monetization
+                  </button>
+               </div>
+            </div>
+
+            {adminTab === 'publisher' && (
+              <AdminEditor 
+                onPublish={(newArticle) => setArticles([newArticle, ...articles])} 
+                videos={videos}
+              />
+            )}
+            {adminTab === 'analytics' && <AnalyticsDashboard articles={articles} />}
+            {adminTab === 'monetization' && (
+               <MonetizationPanel 
+                  config={monetization} 
+                  onUpdate={setMonetization} 
+               />
+            )}
+            {adminTab === 'videos' && (
+               <VideoManager 
+                  videos={videos} 
+                  onUpdateVideos={setVideos} 
+               />
+            )}
+          </div>
+        ) : (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Header for Category */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b pb-6 border-slate-200 dark:border-slate-800">
+               <div>
+                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-black font-serif mb-2">
+                    {selectedCategory}
+                  </h1>
+                  <p className={`text-sm md:text-base font-medium max-w-xl ${preferences.theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {selectedCategory === 'For You' 
+                      ? "Your personalized morning briefing, curated by Big News AI based on your reading habits." 
+                      : `The latest headlines and exclusive coverage from the world of ${selectedCategory.toLowerCase()}.`}
+                  </p>
+               </div>
+               
+               {/* Search (Mobile/Tablet) */}
+               <div className="md:hidden w-full relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search news..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={`w-full pl-10 pr-4 py-3 rounded-xl border focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
+                        preferences.theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'
+                    }`}
+                  />
+               </div>
+            </div>
+
+            {selectedCategory === 'Videos' ? (
+              <VideoFeed 
+                 videos={videos} 
+                 onUpload={(v) => setVideos([v, ...videos])} 
+              />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                  {currentArticles.map((article) => (
+                    <NewsCard 
+                      key={article.id} 
+                      article={article} 
+                      onClick={handleArticleClick}
+                      preferences={preferences}
+                      onUpdateArticle={(updated) => setArticles(articles.map(a => a.id === updated.id ? updated : a))}
+                    />
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-4 py-12 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className={`p-3 rounded-full transition-all border ${
+                        currentPage === 1 
+                          ? 'opacity-30 cursor-not-allowed border-slate-200' 
+                          : 'hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-400'
+                      }`}
+                    >
+                      <ChevronLeft size={24} />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      {Array.from({ length: totalPages }).map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setCurrentPage(i + 1)}
+                          className={`w-10 h-10 rounded-full font-bold transition-all ${
+                            currentPage === i + 1
+                              ? 'bg-blue-600 text-white shadow-lg'
+                              : `hover:bg-slate-100 ${preferences.theme === 'dark' ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500'}`
+                          }`}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className={`p-3 rounded-full transition-all border ${
+                        currentPage === totalPages 
+                          ? 'opacity-30 cursor-not-allowed border-slate-200' 
+                          : 'hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-400'
+                      }`}
+                    >
+                      <ChevronRight size={24} />
+                    </button>
+                  </div>
+                )}
+                
+                {/* News Feed Ad Injection */}
+                {monetization && (monetization.adsenseEnabled || monetization.monetagEnabled) && currentArticles.length >= 6 && (
+                   <div className="w-full">
+                      <AdUnit 
+                        type={monetization.monetagEnabled ? 'monetag' : 'adsense'} 
+                        id={monetization.monetagEnabled ? monetization.monetagId : monetization.adsenseId}
+                        preferences={preferences}
+                        label="Sponsored Content"
+                      />
+                   </div>
+                )}
+
+                {currentArticles.length === 0 && (
+                  <div className="text-center py-40 animate-in zoom-in duration-300">
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 mb-6 text-slate-300 dark:text-slate-600">
+                       <LayoutGrid size={40} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-serif mb-2">No headlines found</h3>
+                    <p className="text-slate-500 max-w-xs mx-auto">Try adjusting your search or selecting a different category.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Article Reader Modal */}
       <ArticleModal 
         article={selectedArticle} 
-        onClose={() => setSelectedArticle(null)} 
+        allArticles={articles}
+        onClose={() => setSelectedArticle(null)}
+        onSelectArticle={handleArticleClick}
         preferences={preferences}
-        onUpdateArticle={handleUpdateArticle}
-        monetization={monetizationConfig}
+        onUpdateArticle={(updated) => {
+          setArticles(articles.map(a => a.id === updated.id ? updated : a));
+          setSelectedArticle(updated);
+        }}
+        monetization={monetization}
         videos={videos}
       />
-      
+
       <LoginModal 
         isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)}
-        onLogin={handleLoginSuccess}
+        onClose={() => setIsLoginModalOpen(false)} 
+        onLogin={() => setIsAuthenticated(true)} 
       />
 
       <FeedbackModal
@@ -754,14 +490,26 @@ const App: React.FC = () => {
         onClose={() => setIsFeedbackModalOpen(false)}
       />
 
-      <SettingsModal
+      <SettingsModal 
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         preferences={preferences}
         onUpdatePreferences={setPreferences}
       />
-    </div>
-  );
-};
 
-export default App;
+      {/* Sub Footer Ad */}
+      {!showAdminDashboard && monetization && (monetization.monetagEnabled) && (
+         <div className="hidden sm:block">
+            <AdUnit 
+               type="monetag" 
+               id={monetization.monetagId} 
+               preferences={preferences} 
+               label="Trending" 
+            />
+         </div>
+      )}
+
+      {/* Footer */}
+      <footer className={`mt-auto border-t py-12 px-4 transition-colors ${preferences.theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-100'}`}>
+        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+          

@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Article, UserPreferences, Comment, MonetizationConfig, Video } from '../types';
-import { X, Clock, User, Tag, Hash, Link, Check, Share2, Mail, Heart, MessageSquare, Send, Play, Film, ExternalLink, Edit2, Save, Reply } from 'lucide-react';
+import { X, Clock, User, Tag, Hash, Link, Check, Share2, Mail, Heart, MessageSquare, Send, Play, Film, ExternalLink, Edit2, Save, Reply, ChevronRight } from 'lucide-react';
 import AdUnit from './AdUnit';
 import Logo from './Logo';
 
@@ -44,14 +44,25 @@ const WhatsappIcon = ({ size = 20, className = "" }: { size?: number, className?
 
 interface ArticleModalProps {
   article: Article | null;
+  allArticles?: Article[];
   onClose: () => void;
+  onSelectArticle?: (article: Article) => void;
   preferences: UserPreferences;
   onUpdateArticle: (article: Article) => void;
   monetization?: MonetizationConfig;
   videos?: Video[];
 }
 
-const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferences, onUpdateArticle, monetization, videos }) => {
+const ArticleModal: React.FC<ArticleModalProps> = ({ 
+  article, 
+  allArticles = [], 
+  onClose, 
+  onSelectArticle,
+  preferences, 
+  onUpdateArticle, 
+  monetization, 
+  videos 
+}) => {
   const [copied, setCopied] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false); // Simple session-based like state
@@ -72,7 +83,12 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
   // Reset video state when article changes
   useEffect(() => {
     setIsPlayingVideo(false);
-  }, [article]);
+    setIsLiked(false);
+    
+    // Scroll modal to top when switching articles
+    const modalContent = document.getElementById('article-modal-content');
+    if (modalContent) modalContent.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [article?.id]);
 
   // Lock scroll on mobile when modal is open
   useEffect(() => {
@@ -83,6 +99,27 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
     }
     return () => { document.body.style.overflow = 'unset'; };
   }, [article]);
+
+  // Related Articles Logic
+  const relatedArticles = useMemo(() => {
+    if (!article || !allArticles.length) return [];
+
+    return allArticles
+      .filter(a => a.id !== article.id) // Exclude current article
+      .map(a => {
+        let score = 0;
+        // Boost score for same category
+        if (a.category === article.category) score += 5;
+        // Boost score for shared tags
+        const sharedTags = a.tags.filter(tag => article.tags.includes(tag));
+        score += sharedTags.length * 3;
+        return { article: a, score };
+      })
+      .filter(item => item.score > 0) // Only include ones with some relevance
+      .sort((a, b) => b.score - a.score || new Date(b.article.publishedAt).getTime() - new Date(a.article.publishedAt).getTime())
+      .slice(0, 3)
+      .map(item => item.article);
+  }, [article, allArticles]);
 
   if (!article) return null;
 
@@ -194,6 +231,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div 
+        id="article-modal-content"
         className={`w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[90vh] overflow-y-auto sm:rounded-xl shadow-2xl animate-in fade-in zoom-in duration-200 ${isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -518,6 +556,47 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, preferenc
                </form>
             </div>
           </div>
+
+          {/* Related Articles Section */}
+          {relatedArticles.length > 0 && (
+            <div className={`mt-12 pt-10 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+              <div className="flex items-center justify-between mb-8">
+                <h3 className={`text-2xl font-bold font-serif ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                  Recommended for You
+                </h3>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {relatedArticles.map((rel) => (
+                  <div 
+                    key={rel.id} 
+                    className="group cursor-pointer flex flex-col"
+                    onClick={() => onSelectArticle?.(rel)}
+                  >
+                    <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-slate-200">
+                      <img 
+                        src={rel.imageUrl} 
+                        alt={rel.title} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-2 left-2">
+                        <span className="px-2 py-0.5 bg-blue-600/90 backdrop-blur-sm text-white text-[9px] font-bold uppercase tracking-wider rounded-full shadow-sm">
+                          {rel.category}
+                        </span>
+                      </div>
+                    </div>
+                    <h4 className={`text-sm font-bold font-serif line-clamp-2 leading-tight group-hover:text-blue-500 transition-colors ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                      {rel.title}
+                    </h4>
+                    <div className={`mt-2 flex items-center gap-2 text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                      <Clock size={10} />
+                      {new Date(rel.publishedAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
