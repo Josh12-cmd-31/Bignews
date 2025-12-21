@@ -20,7 +20,8 @@ import {
   Globe, 
   Layout, 
   Type, 
-  Eye
+  Eye,
+  Flag
 } from 'lucide-react';
 
 interface AdminEditorProps {
@@ -34,6 +35,7 @@ interface Draft {
   topic: string;
   formData: {
     title: string;
+    subject: string;
     category: Category;
     content: string;
     summary: string;
@@ -56,6 +58,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
   
   const [formData, setFormData] = useState({
     title: '',
+    subject: '',
     category: 'Technology' as Category,
     content: '',
     summary: '',
@@ -132,6 +135,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
       setFormData(prev => ({
         ...prev,
         title: generated.title,
+        subject: generated.subject || '',
         content: generated.content,
         summary: generated.summary,
         category: (CATEGORIES.includes(generated.category as Category) ? generated.category : 'Technology') as Category,
@@ -169,6 +173,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
 
     setFormData({
       title: '',
+      subject: '',
       category: 'Technology',
       content: '',
       summary: '',
@@ -186,7 +191,6 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
 
   return (
     <div className="max-w-[1600px] mx-auto pb-20">
-      {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-10 bg-white/80 backdrop-blur-md py-4 border-b border-slate-100">
         <div>
            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -218,10 +222,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEFT COLUMN: Main Editor */}
         <div className="lg:col-span-2 space-y-6">
-          
-          {/* AI Copilot Card */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 overflow-hidden relative group">
             <div 
               className="p-4 flex items-center justify-between cursor-pointer"
@@ -277,9 +278,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
             )}
           </div>
 
-          {/* Document Editor */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 min-h-[700px] flex flex-col">
-             {/* Title Input */}
              <div className="mb-6">
                 <input
                 type="text"
@@ -291,7 +290,20 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
                 />
              </div>
 
-             {/* Summary Input */}
+             <div className="mb-6">
+                <div className="flex items-center gap-2 mb-2 text-blue-600">
+                  <Flag size={16} />
+                  <span className="text-xs font-bold uppercase tracking-widest">Subject Banner</span>
+                </div>
+                <input
+                type="text"
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                placeholder="Impactful banner text (e.g. POLICE REFORM INITIATIVE)"
+                className="w-full text-xl font-black font-sans uppercase tracking-widest placeholder:text-slate-200 border-none focus:ring-0 p-0 text-slate-700 bg-transparent italic"
+                />
+             </div>
+
              <div className="relative mb-8 pl-4 border-l-4 border-slate-100">
                 <textarea
                 required
@@ -303,7 +315,6 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
                 />
              </div>
 
-             {/* Main Content */}
              <div className="flex-1 relative">
                 <textarea
                 required
@@ -316,11 +327,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
           </div>
         </div>
 
-
-        {/* RIGHT COLUMN: Sidebar Settings */}
         <div className="space-y-6">
-          
-          {/* Organization Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
              <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
                 <Layout size={14} /> Content Details
@@ -354,13 +361,11 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
              </div>
           </div>
 
-          {/* Media Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
              <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
                 <ImageIcon size={14} /> Featured Media
              </div>
              <div className="p-4 space-y-4">
-                 {/* Image Preview */}
                  <div className="w-full aspect-video bg-slate-100 rounded-lg overflow-hidden border border-slate-200 relative group">
                     <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -405,7 +410,6 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
              </div>
           </div>
 
-          {/* Publishing Options */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
              <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
                 <Globe size={14} /> Visibility
@@ -437,7 +441,6 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
              </div>
           </div>
 
-          {/* Draft History */}
           {drafts.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 font-semibold text-amber-800 text-xs uppercase tracking-wider flex items-center gap-2">
@@ -470,7 +473,6 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>

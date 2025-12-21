@@ -13,6 +13,7 @@ export interface Comment {
 export interface Article {
   id: string;
   title: string;
+  subject?: string; // New: A short, impactful subject for the news banner
   summary: string;
   content: string; // HTML or markdown string
   category: Category;
@@ -42,6 +43,7 @@ export interface Video {
 
 export interface GeneratedArticleContent {
   title: string;
+  subject?: string;
   summary: string;
   content: string;
   category: string;
@@ -61,4 +63,35 @@ export interface MonetizationConfig {
   monetagId: string;
   adsenseEnabled: boolean;
   monetagEnabled: boolean;
+}
+
+export interface AutomationConfig {
+  enabled: boolean;
+  intervalMinutes: number;
+  lastRunAt?: string;
+  autoCategories: Category[];
+  isCurrentlyRunning?: boolean;
+}
+
+export interface AutomationLog {
+  id: string;
+  timestamp: string;
+  status: 'success' | 'error';
+  articleTitle?: string;
+  message: string;
+}
+
+export interface Transaction {
+  id: string;
+  amount: number;
+  method: 'PayPal';
+  email: string;
+  timestamp: string;
+  status: 'Pending' | 'Processing' | 'Completed' | 'Failed';
+}
+
+export interface WalletState {
+  balance: number;
+  lifetimeEarnings: number;
+  history: Transaction[];
 }

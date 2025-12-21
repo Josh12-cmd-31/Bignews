@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Article, Category, UserPreferences, MonetizationConfig, Video } from './types';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Article, Category, UserPreferences, MonetizationConfig, Video, AutomationConfig, AutomationLog, WalletState, Transaction } from './types';
 import { MOCK_ARTICLES, CATEGORIES, MOCK_VIDEOS } from './constants';
 import AdminEditor from './components/AdminEditor';
 import NewsCard from './components/NewsCard';
@@ -11,11 +11,14 @@ import LoginModal from './components/LoginModal';
 import FeedbackModal from './components/FeedbackModal';
 import SettingsModal from './components/SettingsModal';
 import MonetizationPanel from './components/MonetizationPanel';
+import AutomationPanel from './components/AutomationPanel';
+import DonationModal from './components/DonationModal';
 import AdUnit from './components/AdUnit';
 import VideoManager from './components/VideoManager';
 import VideoFeed from './components/VideoFeed';
 import Logo from './components/Logo';
-import { Newspaper, LayoutGrid, Menu, X, Shield, Search, BarChart3, PenTool, ChevronLeft, ChevronRight, LogOut, Lock, MessageSquarePlus, Settings, DollarSign, Film } from 'lucide-react';
+import { generateArticleContent, identifyTrendingTopic } from './services/geminiService';
+import { Newspaper, LayoutGrid, Menu, X, Shield, Search, BarChart3, PenTool, ChevronLeft, ChevronRight, LogOut, Lock, MessageSquarePlus, Settings, DollarSign, Film, Bot, Heart } from 'lucide-react';
 
 // Security constant: Auto-logout after 15 minutes of inactivity
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000; 
@@ -26,13 +29,17 @@ const App: React.FC = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   
-  // Admin Navigation State: 'publisher' | 'analytics' | 'monetization' | 'videos'
-  const [adminTab, setAdminTab] = useState<'publisher' | 'analytics' | 'monetization' | 'videos'>('publisher');
+  // Admin Navigation State: 'publisher' | 'analytics' | 'monetization' | 'videos' | 'automation'
+  const [adminTab, setAdminTab] = useState<'publisher' | 'analytics' | 'monetization' | 'videos' | 'automation'>('publisher');
 
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   
-  const [articles, setArticles] = useState<Article[]>(MOCK_ARTICLES);
+  const [articles, setArticles] = useState<Article[]>(() => {
+    const saved = localStorage.getItem('bigNewsArticles');
+    return saved ? JSON.parse(saved) : MOCK_ARTICLES;
+  });
   const [videos, setVideos] = useState<Video[]>(MOCK_VIDEOS);
   
   const [selectedCategory, setSelectedCategory] = useState<Category>('For You');
@@ -51,6 +58,36 @@ const App: React.FC = () => {
     fontSize: 'medium'
   });
 
+  // Wallet Management
+  const [wallet, setWallet] = useState<WalletState>(() => {
+    const saved = localStorage.getItem('bigNewsWallet');
+    if (saved) return JSON.parse(saved);
+    
+    const initialViews = MOCK_ARTICLES.reduce((sum, a) => sum + (a.views || 0), 0);
+    const initialBalance = (initialViews / 1000) * 2.50; 
+    return {
+      balance: initialBalance,
+      lifetimeEarnings: initialBalance,
+      history: []
+    };
+  });
+
+  // Automation State
+  const [automation, setAutomation] = useState<AutomationConfig>(() => {
+    const saved = localStorage.getItem('bigNewsAutomationConfig');
+    return saved ? JSON.parse(saved) : {
+      enabled: false,
+      intervalMinutes: 60,
+      autoCategories: ['Technology', 'Business', 'Science', 'Politics'],
+      isCurrentlyRunning: false
+    };
+  });
+
+  const [automationLogs, setAutomationLogs] = useState<AutomationLog[]>(() => {
+    const saved = localStorage.getItem('bigNewsAutomationLogs');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Monetization Config
   const [monetization, setMonetization] = useState<MonetizationConfig>({
     adsenseId: '',
@@ -59,24 +96,92 @@ const App: React.FC = () => {
     monetagEnabled: false
   });
 
-  // Track session for auto-logout
   useEffect(() => {
-    let timeoutId: number;
+    localStorage.setItem('bigNewsArticles', JSON.stringify(articles));
+  }, [articles]);
+
+  useEffect(() => {
+    localStorage.setItem('bigNewsWallet', JSON.stringify(wallet));
+  }, [wallet]);
+
+  useEffect(() => {
+     const totalViews = articles.reduce((sum, a) => sum + a.views, 0);
+     const earnedAmount = (totalViews / 1000) * 2.50;
+     const currentWithdrawals = wallet.history.filter(tx => tx.amount < 0 && tx.status !== 'Failed').reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+     const currentDonations = wallet.history.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
+     
+     setWallet(prev => ({
+        ...prev,
+        balance: Math.max(0, earnedAmount + currentDonations - currentWithdrawals),
+        lifetimeEarnings: earnedAmount + currentDonations
+     }));
+  }, [articles, wallet.history.length]);
+
+  useEffect(() => {
+    localStorage.setItem('bigNewsAutomationConfig', JSON.stringify(automation));
+  }, [automation]);
+
+  useEffect(() => {
+    localStorage.setItem('bigNewsAutomationLogs', JSON.stringify(automationLogs));
+  }, [automationLogs]);
+
+  const runAutomationTask = useCallback(async () => {
+    if (automation.isCurrentlyRunning) return;
+    setAutomation(prev => ({ ...prev, isCurrentlyRunning: true }));
+    try {
+      const { topic, category } = await identifyTrendingTopic(automation.autoCategories);
+      const generated = await generateArticleContent(topic, 'automation');
+      const newArticle: Article = {
+        id: `auto-${Date.now()}`,
+        title: generated.title,
+        summary: generated.summary,
+        content: generated.content,
+        category: (generated.category as Category) || (category as Category),
+        author: 'Big News AI Bot',
+        imageUrl: `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 1000)}`,
+        publishedAt: new Date().toISOString(),
+        isAiGenerated: true,
+        isBreaking: Math.random() > 0.7,
+        tags: generated.tags || [],
+        views: 0,
+        likes: 0,
+        comments: 0,
+        userComments: []
+      };
+      setArticles(prev => [newArticle, ...prev]);
+      setAutomationLogs(prev => [{ id: Date.now().toString(), timestamp: new Date().toISOString(), status: 'success', articleTitle: newArticle.title, message: 'Auto-published' }, ...prev].slice(0, 50));
+      setAutomation(prev => ({ ...prev, lastRunAt: new Date().toISOString(), isCurrentlyRunning: false }));
+    } catch (error) {
+      setAutomationLogs(prev => [{ id: Date.now().toString(), timestamp: new Date().toISOString(), status: 'error', message: 'AI connection error' }, ...prev].slice(0, 50));
+      setAutomation(prev => ({ ...prev, isCurrentlyRunning: false }));
+    }
+  }, [automation]);
+
+  useEffect(() => {
+    if (!automation.enabled) return;
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      const lastRun = automation.lastRunAt ? new Date(automation.lastRunAt).getTime() : 0;
+      const threshold = automation.intervalMinutes * 60 * 1000;
+      if (now - lastRun >= threshold) runAutomationTask();
+    }, 10000);
+    return () => clearInterval(intervalId);
+  }, [automation.enabled, automation.lastRunAt, automation.intervalMinutes, runAutomationTask]);
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
       if (isAuthenticated) {
         clearTimeout(timeoutId);
-        timeoutId = window.setTimeout(() => {
+        timeoutId = setTimeout(() => {
           setIsAuthenticated(false);
           setShowAdminDashboard(false);
-          alert('Session expired for security. Please log in again.');
         }, SESSION_TIMEOUT_MS);
       }
     };
-
     window.addEventListener('mousemove', resetTimer);
     window.addEventListener('keypress', resetTimer);
     resetTimer();
-
     return () => {
       window.removeEventListener('mousemove', resetTimer);
       window.removeEventListener('keypress', resetTimer);
@@ -84,432 +189,127 @@ const App: React.FC = () => {
     };
   }, [isAuthenticated]);
 
-  // Handle Theme Preference
-  useEffect(() => {
-    if (preferences.theme === 'dark') {
-      document.body.classList.add('bg-slate-900', 'text-slate-100');
-      document.body.classList.remove('bg-slate-50', 'text-slate-900');
-    } else {
-      document.body.classList.add('bg-slate-50', 'text-slate-900');
-      document.body.classList.remove('bg-slate-900', 'text-slate-100');
-    }
-  }, [preferences.theme]);
-
-  const handleArticleClick = (article: Article) => {
-    setSelectedArticle(article);
-    // Track interest for personalization
-    setUserInterests(prev => ({
-      ...prev,
-      [article.category]: (prev[article.category] || 0) + 1
-    }));
+  const handleWithdrawal = (amount: number, email: string) => {
+    const tx: Transaction = { id: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`, amount: -amount, method: 'PayPal', email, timestamp: new Date().toISOString(), status: 'Processing' };
+    setWallet(prev => ({ ...prev, balance: prev.balance - amount, history: [tx, ...prev.history] }));
+    setTimeout(() => {
+      setWallet(prev => ({ ...prev, history: prev.history.map(t => t.id === tx.id ? { ...t, status: 'Completed' } : t) }));
+    }, 5000);
   };
 
-  const filteredArticles = articles
-    .filter(a => {
-      const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          a.summary.toLowerCase().includes(searchQuery.toLowerCase());
-      if (selectedCategory === 'For You') return matchesSearch;
-      if (selectedCategory === 'Videos') return false;
-      return a.category === selectedCategory && matchesSearch;
-    })
-    .sort((a, b) => {
-       if (selectedCategory === 'For You') {
-         // Sort by interest score, then date
-         const scoreA = userInterests[a.category] || 0;
-         const scoreB = userInterests[b.category] || 0;
-         if (scoreA !== scoreB) return scoreB - scoreA;
-       }
-       return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-    });
+  const handleDonationSuccess = (amount: number) => {
+    const tx: Transaction = { id: `DON-${Math.random().toString(36).substr(2, 9).toUpperCase()}`, amount: amount, method: 'PayPal', email: 'Community Supporter', timestamp: new Date().toISOString(), status: 'Completed' };
+    setWallet(prev => ({ ...prev, balance: prev.balance + amount, history: [tx, ...prev.history], lifetimeEarnings: prev.lifetimeEarnings + amount }));
+  };
 
-  const totalPages = Math.ceil(filteredArticles.length / ITEMS_PER_PAGE);
+  const filteredArticles = articles.filter(a => {
+    const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase()) || a.summary.toLowerCase().includes(searchQuery.toLowerCase());
+    if (selectedCategory === 'For You') return matchesSearch;
+    if (selectedCategory === 'Videos') return false;
+    return a.category === selectedCategory && matchesSearch;
+  }).sort((a, b) => {
+    if (selectedCategory === 'For You') {
+      const scoreA = userInterests[a.category] || 0;
+      const scoreB = userInterests[b.category] || 0;
+      if (scoreA !== scoreB) return scoreB - scoreA;
+    }
+    return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+  });
+
   const currentArticles = filteredArticles.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredArticles.length / ITEMS_PER_PAGE);
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${preferences.theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'}`}>
-      
-      <BreakingNewsBanner articles={articles} onArticleClick={handleArticleClick} />
-
-      {/* Navigation Header */}
+      <BreakingNewsBanner articles={articles} onArticleClick={setSelectedArticle} />
       <header className={`sticky top-0 z-40 border-b transition-all ${preferences.theme === 'dark' ? 'bg-slate-950/80 border-slate-800' : 'bg-white/80 border-slate-200'} backdrop-blur-md`}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-             <button 
-               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-               className={`lg:hidden p-2 rounded-lg ${preferences.theme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}
-             >
-               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-             </button>
+             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden p-2"><Menu size={24} /></button>
              <Logo isDark={preferences.theme === 'dark'} />
           </div>
-
-          {/* Search Bar (Desktop) */}
           <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <div className={`relative w-full ${preferences.theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" size={18} />
-              <input
-                type="text"
-                placeholder="Search headlines..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2 rounded-full border focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
-                    preferences.theme === 'dark' 
-                      ? 'bg-slate-900 border-slate-700 placeholder-slate-600 focus:bg-slate-800' 
-                      : 'bg-slate-100 border-slate-200 placeholder-slate-400 focus:bg-white'
-                }`}
-              />
+              <input type="text" placeholder="Search news..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`w-full pl-10 pr-4 py-2 rounded-full border ${preferences.theme === 'dark' ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-200'}`} />
             </div>
           </div>
-
           <div className="flex items-center gap-2 sm:gap-4">
             <button 
-              onClick={() => setIsSettingsModalOpen(true)}
-              className={`p-2 rounded-full transition-colors ${preferences.theme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}
-              title="Reading Settings"
+              onClick={() => setIsDonationModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-xs font-bold transition-all shadow-md active:scale-95"
             >
-              <Settings size={22} />
+              <Heart size={14} className="fill-current" />
+              <span className="hidden sm:inline">Support Us</span>
             </button>
-            <button 
-               onClick={() => setIsFeedbackModalOpen(true)}
-               className={`hidden sm:flex p-2 rounded-full transition-colors ${preferences.theme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}
-               title="Send Feedback"
-            >
-              <MessageSquarePlus size={22} />
-            </button>
-            <div className={`w-px h-6 mx-1 ${preferences.theme === 'dark' ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+            <button onClick={() => setIsSettingsModalOpen(true)} className="p-2"><Settings size={22} /></button>
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowAdminDashboard(!showAdminDashboard)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
-                    showAdminDashboard 
-                      ? 'bg-blue-600 text-white shadow-lg' 
-                      : (preferences.theme === 'dark' ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')
-                  }`}
-                >
-                  <Shield size={16} />
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => { setIsAuthenticated(false); setShowAdminDashboard(false); }}
-                  className={`p-2 rounded-full text-red-500 transition-colors ${preferences.theme === 'dark' ? 'hover:bg-red-900/20' : 'hover:bg-red-50'}`}
-                  title="Logout"
-                >
-                  <LogOut size={22} />
-                </button>
+                <button onClick={() => setShowAdminDashboard(!showAdminDashboard)} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg font-bold text-xs uppercase"><Shield size={16} /> Dashboard</button>
+                <button onClick={() => setIsAuthenticated(false)} className="p-2 text-red-500"><LogOut size={22} /></button>
               </div>
             ) : (
-              <button
-                onClick={() => setIsLoginModalOpen(true)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${
-                    preferences.theme === 'dark'
-                      ? 'bg-slate-800 text-slate-100 hover:bg-slate-700'
-                      : 'bg-slate-900 text-white hover:bg-slate-800 shadow-md'
-                }`}
-              >
-                <Lock size={14} />
-                Admin
-              </button>
+              <button onClick={() => setIsLoginModalOpen(true)} className="px-4 py-2 bg-slate-900 text-white rounded-full font-bold text-xs uppercase"><Lock size={14} /> Admin</button>
             )}
           </div>
         </div>
-
-        {/* Categories Bar */}
         {!showAdminDashboard && (
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-            <nav className="flex items-center space-x-1 overflow-x-auto no-scrollbar py-2 -mb-px">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => {
-                    setSelectedCategory(cat);
-                    setCurrentPage(1);
-                  }}
-                  className={`whitespace-nowrap px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-lg transition-all ${
-                    selectedCategory === cat
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : `hover:bg-slate-100 ${preferences.theme === 'dark' ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500'}`
-                  }`}
-                >
-                  {cat}
-                </button>
+          <div className="max-w-[1600px] mx-auto px-4 py-2">
+            <nav className="flex items-center space-x-1 overflow-x-auto no-scrollbar">
+              {CATEGORIES.map(cat => (
+                <button key={cat} onClick={() => { setSelectedCategory(cat); setCurrentPage(1); }} className={`px-4 py-2 text-xs font-bold uppercase rounded-lg ${selectedCategory === cat ? 'bg-blue-600 text-white' : 'hover:bg-slate-100'}`}>{cat}</button>
               ))}
             </nav>
           </div>
         )}
       </header>
 
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden animate-in fade-in duration-300">
-           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
-           <div className={`absolute left-0 top-0 bottom-0 w-4/5 max-w-xs shadow-2xl animate-in slide-in-from-left duration-300 ${preferences.theme === 'dark' ? 'bg-slate-900' : 'bg-white'}`}>
-              <div className="p-6">
-                 <div className="flex justify-between items-center mb-10">
-                    <Logo isDark={preferences.theme === 'dark'} />
-                    <button onClick={() => setIsMobileMenuOpen(false)} className={preferences.theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}>
-                       <X size={24} />
-                    </button>
-                 </div>
-                 
-                 <div className="space-y-1">
-                    {CATEGORIES.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => {
-                          setSelectedCategory(cat);
-                          setCurrentPage(1);
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 rounded-xl font-bold uppercase tracking-widest text-sm transition-all ${
-                          selectedCategory === cat
-                            ? 'bg-blue-600 text-white'
-                            : (preferences.theme === 'dark' ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100')
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                 </div>
-
-                 <hr className={`my-8 ${preferences.theme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`} />
-                 
-                 <div className="space-y-2">
-                    <button 
-                       onClick={() => { setIsMobileMenuOpen(false); setIsFeedbackModalOpen(true); }}
-                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${preferences.theme === 'dark' ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'}`}
-                    >
-                       <MessageSquarePlus size={20} /> Feedback
-                    </button>
-                 </div>
-              </div>
-           </div>
-        </div>
-      )}
-
-      {/* Main Content */}
       <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
         {showAdminDashboard ? (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Admin Header with Tabs */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
-               <h1 className="text-3xl font-black font-serif flex items-center gap-3">
-                 Admin Dashboard
-               </h1>
-               
-               <div className={`p-1 rounded-xl flex items-center ${preferences.theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                  <button 
-                    onClick={() => setAdminTab('publisher')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${adminTab === 'publisher' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    <PenTool size={16} /> Publisher
-                  </button>
-                  <button 
-                    onClick={() => setAdminTab('videos')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${adminTab === 'videos' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    <Film size={16} /> Videos
-                  </button>
-                  <button 
-                    onClick={() => setAdminTab('analytics')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${adminTab === 'analytics' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    <BarChart3 size={16} /> Analytics
-                  </button>
-                  <button 
-                    onClick={() => setAdminTab('monetization')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${adminTab === 'monetization' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    <DollarSign size={16} /> Monetization
-                  </button>
-               </div>
+          <div>
+            <div className="flex justify-between items-center mb-10">
+              <h1 className="text-3xl font-black">Dashboard</h1>
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+                {['publisher', 'videos', 'automation', 'analytics', 'monetization'].map(tab => (
+                  <button key={tab} onClick={() => setAdminTab(tab as any)} className={`px-4 py-2 text-xs font-bold uppercase rounded-lg ${adminTab === tab ? 'bg-white shadow' : 'text-slate-500'}`}>{tab}</button>
+                ))}
+              </div>
             </div>
-
-            {adminTab === 'publisher' && (
-              <AdminEditor 
-                onPublish={(newArticle) => setArticles([newArticle, ...articles])} 
-                videos={videos}
-              />
-            )}
-            {adminTab === 'analytics' && <AnalyticsDashboard articles={articles} />}
-            {adminTab === 'monetization' && (
-               <MonetizationPanel 
-                  config={monetization} 
-                  onUpdate={setMonetization} 
-               />
-            )}
-            {adminTab === 'videos' && (
-               <VideoManager 
-                  videos={videos} 
-                  onUpdateVideos={setVideos} 
-               />
-            )}
+            {adminTab === 'publisher' && <AdminEditor onPublish={newA => setArticles([newA, ...articles])} videos={videos} />}
+            {adminTab === 'analytics' && <AnalyticsDashboard articles={articles} wallet={wallet} onWithdrawal={handleWithdrawal} />}
+            {adminTab === 'automation' && <AutomationPanel config={automation} onUpdate={setAutomation} logs={automationLogs} />}
+            {adminTab === 'monetization' && <MonetizationPanel config={monetization} onUpdate={setMonetization} />}
+            {adminTab === 'videos' && <VideoManager videos={videos} onUpdateVideos={setVideos} />}
           </div>
         ) : (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Header for Category */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b pb-6 border-slate-200 dark:border-slate-800">
-               <div>
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-black font-serif mb-2">
-                    {selectedCategory}
-                  </h1>
-                  <p className={`text-sm md:text-base font-medium max-w-xl ${preferences.theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {selectedCategory === 'For You' 
-                      ? "Your personalized morning briefing, curated by Big News AI based on your reading habits." 
-                      : `The latest headlines and exclusive coverage from the world of ${selectedCategory.toLowerCase()}.`}
-                  </p>
+          <div>
+             {selectedCategory === 'Videos' ? <VideoFeed videos={videos} /> : (
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                 {currentArticles.map(a => <NewsCard key={a.id} article={a} onClick={setSelectedArticle} preferences={preferences} onUpdateArticle={u => setArticles(articles.map(o => o.id === u.id ? u : o))} />)}
                </div>
-               
-               {/* Search (Mobile/Tablet) */}
-               <div className="md:hidden w-full relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" size={18} />
-                  <input
-                    type="text"
-                    placeholder="Search news..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 rounded-xl border focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
-                        preferences.theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'
-                    }`}
-                  />
-               </div>
-            </div>
-
-            {selectedCategory === 'Videos' ? (
-              <VideoFeed 
-                 videos={videos} 
-                 onUpload={(v) => setVideos([v, ...videos])} 
-              />
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                  {currentArticles.map((article) => (
-                    <NewsCard 
-                      key={article.id} 
-                      article={article} 
-                      onClick={handleArticleClick}
-                      preferences={preferences}
-                      onUpdateArticle={(updated) => setArticles(articles.map(a => a.id === updated.id ? updated : a))}
-                    />
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-4 py-12 border-t border-slate-100 dark:border-slate-800">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className={`p-3 rounded-full transition-all border ${
-                        currentPage === 1 
-                          ? 'opacity-30 cursor-not-allowed border-slate-200' 
-                          : 'hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-400'
-                      }`}
-                    >
-                      <ChevronLeft size={24} />
-                    </button>
-                    <div className="flex items-center gap-2">
-                      {Array.from({ length: totalPages }).map((_, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setCurrentPage(i + 1)}
-                          className={`w-10 h-10 rounded-full font-bold transition-all ${
-                            currentPage === i + 1
-                              ? 'bg-blue-600 text-white shadow-lg'
-                              : `hover:bg-slate-100 ${preferences.theme === 'dark' ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500'}`
-                          }`}
-                        >
-                          {i + 1}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                      className={`p-3 rounded-full transition-all border ${
-                        currentPage === totalPages 
-                          ? 'opacity-30 cursor-not-allowed border-slate-200' 
-                          : 'hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-400'
-                      }`}
-                    >
-                      <ChevronRight size={24} />
-                    </button>
-                  </div>
-                )}
-                
-                {/* News Feed Ad Injection */}
-                {monetization && (monetization.adsenseEnabled || monetization.monetagEnabled) && currentArticles.length >= 6 && (
-                   <div className="w-full">
-                      <AdUnit 
-                        type={monetization.monetagEnabled ? 'monetag' : 'adsense'} 
-                        id={monetization.monetagEnabled ? monetization.monetagId : monetization.adsenseId}
-                        preferences={preferences}
-                        label="Sponsored Content"
-                      />
-                   </div>
-                )}
-
-                {currentArticles.length === 0 && (
-                  <div className="text-center py-40 animate-in zoom-in duration-300">
-                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 mb-6 text-slate-300 dark:text-slate-600">
-                       <LayoutGrid size={40} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-serif mb-2">No headlines found</h3>
-                    <p className="text-slate-500 max-w-xs mx-auto">Try adjusting your search or selecting a different category.</p>
-                  </div>
-                )}
-              </>
-            )}
+             )}
           </div>
         )}
       </main>
 
-      {/* Article Reader Modal */}
       <ArticleModal 
         article={selectedArticle} 
-        allArticles={articles}
-        onClose={() => setSelectedArticle(null)}
-        onSelectArticle={handleArticleClick}
-        preferences={preferences}
-        onUpdateArticle={(updated) => {
-          setArticles(articles.map(a => a.id === updated.id ? updated : a));
-          setSelectedArticle(updated);
-        }}
-        monetization={monetization}
-        videos={videos}
+        onClose={() => setSelectedArticle(null)} 
+        preferences={preferences} 
+        onUpdateArticle={u => { setArticles(articles.map(o => o.id === u.id ? u : o)); setSelectedArticle(u); }} 
+        onOpenDonation={() => setIsDonationModalOpen(true)}
       />
-
-      <LoginModal 
-        isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
-        onLogin={() => setIsAuthenticated(true)} 
+      <DonationModal 
+        isOpen={isDonationModalOpen} 
+        onClose={() => setIsDonationModalOpen(false)} 
+        onSuccess={handleDonationSuccess} 
+        isDark={preferences.theme === 'dark'} 
       />
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={() => setIsAuthenticated(true)} />
+      <SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} preferences={preferences} onUpdatePreferences={setPreferences} />
+      <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} />
+    </div>
+  );
+};
 
-      <FeedbackModal
-        isOpen={isFeedbackModalOpen}
-        onClose={() => setIsFeedbackModalOpen(false)}
-      />
-
-      <SettingsModal 
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        preferences={preferences}
-        onUpdatePreferences={setPreferences}
-      />
-
-      {/* Sub Footer Ad */}
-      {!showAdminDashboard && monetization && (monetization.monetagEnabled) && (
-         <div className="hidden sm:block">
-            <AdUnit 
-               type="monetag" 
-               id={monetization.monetagId} 
-               preferences={preferences} 
-               label="Trending" 
-            />
-         </div>
-      )}
-
-      {/* Footer */}
-      <footer className={`mt-auto border-t py-12 px-4 transition-colors ${preferences.theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-100'}`}>
-        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          
+export default App;
