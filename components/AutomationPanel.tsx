@@ -39,8 +39,9 @@ const AutomationPanel: React.FC<AutomationPanelProps> = ({ config, onUpdate, log
     onUpdate({
       ...config,
       enabled: !config.enabled,
-      // If turning on, set lastRunAt to now so it starts the cycle or check right away
-      lastRunAt: !config.enabled ? new Date().toISOString() : config.lastRunAt
+      // To ensure immediate start upon activation, we only set lastRunAt if turning it ON for the first time
+      // or if it has never run. Setting it to 0 forces the threshold check in App.tsx to pass.
+      lastRunAt: !config.enabled && !config.lastRunAt ? new Date(0).toISOString() : config.lastRunAt
     });
   };
 
@@ -131,6 +132,7 @@ const AutomationPanel: React.FC<AutomationPanelProps> = ({ config, onUpdate, log
                       onChange={(e) => onUpdate({...config, intervalMinutes: Number(e.target.value)})}
                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500"
                     >
+                      <option value={10}>10 Minutes (Fast)</option>
                       <option value={15}>15 Minutes</option>
                       <option value={30}>30 Minutes</option>
                       <option value={60}>1 Hour</option>
@@ -143,7 +145,7 @@ const AutomationPanel: React.FC<AutomationPanelProps> = ({ config, onUpdate, log
             <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3">
                <AlertCircle className="text-blue-500 shrink-0" size={20} />
                <p className="text-xs text-blue-800 leading-relaxed">
-                  <strong>How it works:</strong> When active, the bot uses Gemini 3.0 to research trending topics across your news categories and publishes a full journalistic report automatically.
+                  <strong>How it works:</strong> When active, the bot uses Gemini 3.0 to research trending topics across your news categories and publishes a full journalistic report automatically every 10 minutes.
                </p>
             </div>
          </div>

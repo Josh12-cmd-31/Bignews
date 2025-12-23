@@ -1,5 +1,5 @@
 
-export type Category = 'For You' | 'Technology' | 'Politics' | 'Health' | 'Lifestyle' | 'Sports' | 'Food' | 'Business' | 'Science' | 'Entertainment' | 'Videos';
+export type Category = 'For You' | 'Technology' | 'Politics' | 'Health' | 'Lifestyle' | 'Sports' | 'Food' | 'Business' | 'Science' | 'Entertainment' | 'Videos' | 'Bookmarks';
 
 export interface Comment {
   id: string;
@@ -10,12 +10,18 @@ export interface Comment {
   date: string;
 }
 
+export interface UserProfile {
+  name: string;
+  avatarColor: string;
+  joinedAt: string;
+}
+
 export interface Article {
   id: string;
   title: string;
-  subject?: string; // New: A short, impactful subject for the news banner
+  subject?: string;
   summary: string;
-  content: string; // HTML or markdown string
+  content: string;
   category: Category;
   author: string;
   imageUrl: string;
@@ -35,7 +41,7 @@ export interface Video {
   id: string;
   title: string;
   type: 'youtube' | 'upload';
-  url: string; // YouTube ID or Direct URL
+  url: string;
   thumbnail?: string;
   views: number;
   likes: number;

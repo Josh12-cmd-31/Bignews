@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Article, UserPreferences, Comment, MonetizationConfig, Video } from '../types';
-import { X, Clock, User, Share2, Heart, MessageSquare, Send, Gift, ShieldCheck, Check } from 'lucide-react';
+import { X, Clock, User, Share2, Heart, MessageSquare, Send, Gift, ShieldCheck, Check, Bookmark } from 'lucide-react';
 import Logo from './Logo';
 
 interface ArticleModalProps {
@@ -10,8 +10,8 @@ interface ArticleModalProps {
   preferences: UserPreferences;
   onUpdateArticle: (article: Article) => void;
   onOpenDonation?: () => void;
-  monetization?: MonetizationConfig;
-  videos?: Video[];
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
 }
 
 const ArticleModal: React.FC<ArticleModalProps> = ({ 
@@ -20,6 +20,8 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
   preferences, 
   onUpdateArticle, 
   onOpenDonation,
+  isBookmarked,
+  onToggleBookmark
 }) => {
   const [copied, setCopied] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -51,37 +53,17 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
     onUpdateArticle({ ...article, likes: (article.likes || 0) + 1 });
   };
 
-  const handleAddComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-    const comment: Comment = { 
-      id: Date.now().toString(), 
-      userId: 'guest', 
-      user: guestName, 
-      text: newComment.trim(), 
-      date: new Date().toISOString() 
-    };
-    const updated = [...(article.userComments || []), comment];
-    onUpdateArticle({ ...article, comments: updated.length, userComments: updated });
-    setNewComment('');
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className={`w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[90vh] overflow-y-auto sm:rounded-xl shadow-2xl ${isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`} onClick={e => e.stopPropagation()}>
         <div className="relative aspect-video bg-black overflow-hidden">
           <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover" />
           
-          {/* Branded Banner on Modal Image */}
           {article.subject && (
             <div className="absolute bottom-0 left-0 right-0 z-20">
               <div className="bg-slate-900/90 backdrop-blur-md border-t border-white/10 px-6 py-4 flex items-center gap-4">
-                 <div className="bg-blue-600 text-white p-2 rounded-md shadow-lg flex-shrink-0">
-                    <ShieldCheck size={20} />
-                 </div>
-                 <p className="text-white text-xs sm:text-sm font-black uppercase tracking-widest line-clamp-2 italic leading-snug">
-                    {article.subject}
-                 </p>
+                 <div className="bg-blue-600 text-white p-2 rounded-md shadow-lg flex-shrink-0"><ShieldCheck size={20} /></div>
+                 <p className="text-white text-xs sm:text-sm font-black uppercase tracking-widest line-clamp-2 italic leading-snug">{article.subject}</p>
               </div>
             </div>
           )}
@@ -94,10 +76,17 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
             <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold uppercase rounded-full shadow-sm">{article.category}</span>
             <div className="flex gap-2">
               <button 
-                onClick={handleCopyLink} 
-                className={`p-2 border rounded-full transition-colors ${isDark ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-50'}`}
-                title="Copy Link"
+                onClick={onToggleBookmark} 
+                className={`p-2 border rounded-full transition-all ${
+                  isBookmarked 
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
+                    : isDark ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                }`}
+                title={isBookmarked ? "Saved" : "Save for later"}
               >
+                <Bookmark size={18} fill={isBookmarked ? "currentColor" : "none"} />
+              </button>
+              <button onClick={handleCopyLink} className={`p-2 border rounded-full transition-colors ${isDark ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-50'}`} title="Copy Link">
                 {copied ? <Check size={18} className="text-green-500" /> : <Share2 size={18} />}
               </button>
             </div>
@@ -114,19 +103,12 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
           
           <div className={`mt-12 p-8 rounded-2xl border-2 border-dashed transition-colors ${isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-rose-50 border-rose-100'}`}>
             <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
-              <div className={`p-4 rounded-full ${isDark ? 'bg-slate-700 text-rose-400' : 'bg-white text-rose-500 shadow-sm'}`}>
-                <Gift size={32} />
-              </div>
+              <div className={`p-4 rounded-full ${isDark ? 'bg-slate-700 text-rose-400' : 'bg-white text-rose-500 shadow-sm'}`}><Gift size={32} /></div>
               <div className="flex-1">
                 <h3 className={`text-xl font-bold mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Support our Journalism</h3>
-                <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Enjoying {article.author}'s coverage? Your contribution helps us keep Big News independent and free from paywalls.</p>
+                <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Enjoying {article.author}'s coverage? Your contribution helps us keep Big News independent.</p>
               </div>
-              <button 
-                onClick={onOpenDonation}
-                className="whitespace-nowrap px-8 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold shadow-lg shadow-rose-500/20 transition-all active:scale-95 flex items-center gap-2"
-              >
-                Donate Now
-              </button>
+              <button onClick={onOpenDonation} className="whitespace-nowrap px-8 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2">Donate Now</button>
             </div>
           </div>
 
@@ -137,47 +119,25 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
              </button>
 
              <div className="mt-12">
-               <h4 className="text-xl font-bold mb-6 flex items-center gap-2">
-                 <MessageSquare size={20} />
-                 Comments ({article.userComments?.length || 0})
-               </h4>
-
-               <form onSubmit={handleAddComment} className="flex gap-2 mb-8">
-                 <input 
-                   type="text" 
-                   value={newComment} 
-                   onChange={e => setNewComment(e.target.value)} 
-                   placeholder="Add a comment..." 
-                   className={`flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`} 
-                 />
-                 <button type="submit" className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors">
-                   <Send size={18} />
-                 </button>
+               <h4 className="text-xl font-bold mb-6 flex items-center gap-2"><MessageSquare size={20} />Comments ({article.userComments?.length || 0})</h4>
+               <form onSubmit={(e) => e.preventDefault()} className="flex gap-2 mb-8">
+                 <input type="text" placeholder="Add a comment..." className={`flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`} />
+                 <button type="submit" className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"><Send size={18} /></button>
                </form>
-
                <div className="space-y-6">
                  {article.userComments && article.userComments.length > 0 ? (
                    article.userComments.map(c => (
                      <div key={c.id} className={`pb-6 border-b last:border-0 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
-                       <div className="flex justify-between text-xs font-bold mb-2">
-                         <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>{c.user}</span> 
-                         <span className="text-slate-400">{new Date(c.date).toLocaleDateString()}</span>
-                       </div>
+                       <div className="flex justify-between text-xs font-bold mb-2"><span className={isDark ? 'text-blue-400' : 'text-blue-600'}>{c.user}</span> <span className="text-slate-400">{new Date(c.date).toLocaleDateString()}</span></div>
                        <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{c.text}</p>
                      </div>
                    ))
                  ) : (
-                   <div className="text-center py-10 text-slate-400 text-sm italic">
-                     No comments yet. Be the first to join the conversation.
-                   </div>
+                   <div className="text-center py-10 text-slate-400 text-sm italic">No comments yet.</div>
                  )}
                </div>
              </div>
           </div>
-        </div>
-        
-        <div className={`p-6 border-t flex justify-center ${isDark ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
-           <Logo isDark={isDark} variant="full" className="opacity-50" />
         </div>
       </div>
     </div>
