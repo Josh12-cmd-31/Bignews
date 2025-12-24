@@ -12,5 +12,7 @@
     "personalized feed",
     "react news app"
   ],
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }

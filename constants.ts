@@ -12,7 +12,8 @@ export const CATEGORIES: Category[] = [
   'Business',
   'Science',
   'Entertainment',
-  'Videos'
+  'Videos',
+  'Bookmarks'
 ];
 
 export const MOCK_VIDEOS: Video[] = [
@@ -20,7 +21,7 @@ export const MOCK_VIDEOS: Video[] = [
     id: 'v1',
     title: 'Top 5 Tech Gadgets of 2024',
     type: 'youtube',
-    url: 'dQw4w9WgXcQ', // Placeholder ID
+    url: 'dQw4w9WgXcQ', 
     views: 15400,
     likes: 1200
   },
@@ -29,7 +30,7 @@ export const MOCK_VIDEOS: Video[] = [
     title: 'Amazing Drone Footage of Nature',
     type: 'upload',
     url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-    thumbnail: 'https://picsum.photos/400/700?random=20',
+    thumbnail: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=400&h=700&q=80',
     views: 8900,
     likes: 540
   },
@@ -37,7 +38,7 @@ export const MOCK_VIDEOS: Video[] = [
     id: 'v3',
     title: 'Quick Recipe: 5 Minute Pasta',
     type: 'youtube',
-    url: 'M7lc1UVf-VE', // Placeholder ID
+    url: 'M7lc1UVf-VE',
     views: 32000,
     likes: 4500
   }
@@ -57,7 +58,7 @@ export const MOCK_ARTICLES: Article[] = [
     `,
     category: 'Technology',
     author: 'Big News Staff',
-    imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=1600&h=900&q=80',
     publishedAt: new Date().toISOString(),
     tags: ['Founder', 'Technology', 'Innovation', 'Leadership', 'Mova AI'],
     views: 250000,
@@ -78,7 +79,7 @@ export const MOCK_ARTICLES: Article[] = [
     `,
     category: 'Politics',
     author: 'Daniel Craig',
-    imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=1600&h=900&q=80',
     publishedAt: new Date().toISOString(),
     tags: ['Safety', 'Public Policy', 'Community', 'Peace'],
     views: 12400,
@@ -99,7 +100,7 @@ export const MOCK_ARTICLES: Article[] = [
     `,
     category: 'Technology',
     author: 'Sarah Jenkins',
-    imageUrl: 'https://picsum.photos/800/600?random=1',
+    imageUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1600&h=900&q=80',
     publishedAt: new Date(Date.now() - 86400000).toISOString(),
     tags: ['Quantum Physics', 'Innovation', 'Future Tech'],
     views: 12500,
@@ -108,46 +109,5 @@ export const MOCK_ARTICLES: Article[] = [
     userComments: [],
     isBreaking: false,
     linkedVideoId: 'v1'
-  },
-  {
-    id: '2',
-    title: 'Top 10 Street Foods to Try in Tokyo',
-    subject: 'CULINARY EXPEDITION',
-    summary: 'A culinary journey through the bustling streets of Japan\'s capital.',
-    content: `
-      <p>Tokyo is a paradise for food lovers, and its street food scene is no exception. From sizzling Yakitori to fluffy Taiyaki, the options are endless.</p>
-      <p>Our top pick is the classic Takoyaki – battered octopus balls topped with bonito flakes and savory sauce. Best enjoyed piping hot from a street vendor in Osaka or Tokyo.</p>
-      <p>Don't forget to try the Matcha soft serve for dessert!</p>
-    `,
-    category: 'Food',
-    author: 'Kenji Tanaka',
-    imageUrl: 'https://picsum.photos/800/600?random=2',
-    publishedAt: new Date(Date.now() - 172800000).toISOString(),
-    tags: ['Japan', 'Travel', 'Street Food', 'Culinary'],
-    views: 8900,
-    likes: 1205,
-    comments: 1,
-    userComments: [],
-    isBreaking: false,
-  },
-  {
-    id: 'terms-of-service',
-    title: 'Terms of Service: How We Operate Big News',
-    subject: 'OFFICIAL POLICY',
-    summary: 'Everything you need to know about using our platform, content ownership, and AI disclosures.',
-    content: `
-      <h2>1. Acceptance of Terms</h2>
-      <p>By accessing and using Big News, you agree to be bound by these Terms of Service. If you do not agree to these terms, please refrain from using the platform.</p>
-    `,
-    category: 'Business',
-    author: 'Legal Dept.',
-    imageUrl: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
-    publishedAt: new Date().toISOString(),
-    tags: ['Legal', 'Terms', 'User Agreement'],
-    views: 100,
-    likes: 0,
-    comments: 0,
-    userComments: [],
-    isBreaking: false,
   }
 ];

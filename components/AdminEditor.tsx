@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Article, Category, Video } from '../types';
 import { CATEGORIES } from '../constants';
 import { generateArticleContent } from '../services/geminiService';
@@ -19,9 +19,9 @@ import {
   Link as LinkIcon, 
   Globe, 
   Layout, 
-  Type, 
-  Eye,
-  Flag
+  Flag,
+  Upload,
+  X
 } from 'lucide-react';
 
 interface AdminEditorProps {
@@ -52,9 +52,11 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
   const [inputMode, setInputMode] = useState<'topic' | 'url'>('topic');
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [showAiPanel, setShowAiPanel] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -63,7 +65,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
     content: '',
     summary: '',
     author: 'Admin',
-    imageUrl: `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 1000)}`,
+    imageUrl: `https://picsum.photos/seed/${Math.floor(Math.random() * 1000000)}/1600/900`,
     tags: '',
     isBreaking: false,
     linkedVideoId: '',
@@ -80,6 +82,24 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
       }
     }
   }, []);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file.');
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData(prev => ({ ...prev, imageUrl: reader.result as string }));
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const saveDraft = () => {
     const newDraft: Draft = {
@@ -100,7 +120,6 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
     setDrafts(updatedDrafts);
     localStorage.setItem('bigNewsDrafts', JSON.stringify(updatedDrafts));
     
-    // Visual feedback
     const btn = document.getElementById('save-draft-btn');
     if(btn) {
        const originalText = btn.innerHTML;
@@ -140,9 +159,11 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
         summary: generated.summary,
         category: (CATEGORIES.includes(generated.category as Category) ? generated.category : 'Technology') as Category,
         tags: generated.tags ? generated.tags.join(', ') : '',
-        sourceUrl: inputMode === 'url' ? inputValue : prev.sourceUrl
+        sourceUrl: inputMode === 'url' ? inputValue : prev.sourceUrl,
+        // Ensure generated image uses a STABLE seed so it never changes
+        imageUrl: `https://picsum.photos/seed/${Date.now()}/1600/900`
       }));
-      setShowAiPanel(false); // Auto collapse after success
+      setShowAiPanel(false);
     } catch (err) {
       alert("Failed to generate content. Please check API key or try again.");
     } finally {
@@ -152,6 +173,11 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title || !formData.content) {
+      alert('Title and Content are required.');
+      return;
+    }
+
     const newArticle: Article = {
       id: Date.now().toString(),
       ...formData,
@@ -178,7 +204,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
       content: '',
       summary: '',
       author: 'Admin',
-      imageUrl: `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 1000)}`,
+      imageUrl: `https://picsum.photos/seed/${Math.floor(Math.random() * 1000000)}/1600/900`,
       tags: '',
       isBreaking: false,
       linkedVideoId: '',
@@ -330,62 +356,56 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
              <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
-                <Layout size={14} /> Content Details
-             </div>
-             <div className="p-4 space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Category</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as Category })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 text-sm font-medium"
-                  >
-                    {CATEGORIES.filter(c => c !== 'For You').map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Tags</label>
-                  <div className="relative">
-                    <Tags className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                    <input
-                      type="text"
-                      value={formData.tags}
-                      onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                      placeholder="Tech, Future, AI..."
-                      className="w-full pl-9 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50"
-                    />
-                  </div>
-                </div>
-             </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-             <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
                 <ImageIcon size={14} /> Featured Media
              </div>
              <div className="p-4 space-y-4">
                  <div className="w-full aspect-video bg-slate-100 rounded-lg overflow-hidden border border-slate-200 relative group">
                     <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-col gap-2">
+                        <button 
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-4 py-2 bg-white rounded-full text-xs font-bold hover:bg-slate-100 flex items-center gap-2 shadow-lg transition-transform active:scale-95"
+                        >
+                          <Upload size={14} /> {isUploading ? 'Processing...' : 'Upload Image'}
+                        </button>
                         <button 
                         type="button"
-                        onClick={() => setFormData({...formData, imageUrl: `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 1000)}`})}
-                        className="px-3 py-1.5 bg-white rounded-full text-xs font-bold hover:bg-slate-100 flex items-center gap-1 shadow-lg"
+                        onClick={() => setFormData({...formData, imageUrl: `https://picsum.photos/seed/${Math.floor(Math.random() * 1000000)}/1600/900`})}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-full text-xs font-bold hover:bg-blue-700 flex items-center gap-2 shadow-lg transition-transform active:scale-95"
                         >
-                        <Sparkles size={12} /> Randomize
+                        <Sparkles size={14} /> Randomize AI Image
                         </button>
                     </div>
                  </div>
 
-                 <input
-                    type="text"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs text-slate-600 bg-slate-50"
-                    placeholder="https://image-url.com..."
-                 />
+                 <div className="space-y-2">
+                   <label className="block text-xs font-semibold text-slate-500">Image URL / Source</label>
+                   <input
+                      type="text"
+                      value={formData.imageUrl.startsWith('data:') ? 'Local Image Stored' : formData.imageUrl}
+                      readOnly={formData.imageUrl.startsWith('data:')}
+                      onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
+                      className={`w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs bg-slate-50 ${formData.imageUrl.startsWith('data:') ? 'text-blue-600 font-bold italic' : 'text-slate-600'}`}
+                      placeholder="https://image-url.com..."
+                   />
+                   {formData.imageUrl.startsWith('data:') && (
+                     <button 
+                       onClick={() => setFormData({...prev => ({...prev, imageUrl: ''})})}
+                       className="text-[10px] text-red-500 font-bold hover:underline flex items-center gap-1"
+                     >
+                       <X size={10} /> Remove Uploaded Image
+                     </button>
+                   )}
+                 </div>
+
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handleImageUpload} 
+                />
 
                 <hr className="border-slate-100" />
                 

@@ -100,15 +100,19 @@ const App: React.FC = () => {
     try {
       const { topic, category } = await identifyTrendingTopic(automation.autoCategories as string[]);
       const generated = await generateArticleContent(topic, 'automation');
+      
+      // FIXED IMAGE SEED: Using timestamp as seed so it NEVER changes for this article
+      const fixedSeed = Date.now();
+      
       const newArticle: Article = {
-        id: `auto-${Date.now()}`,
+        id: `auto-${fixedSeed}`,
         title: generated.title,
         subject: generated.subject,
         summary: generated.summary,
         content: generated.content,
         category: (generated.category as Category) || (category as Category),
         author: 'Big News AI Bot',
-        imageUrl: `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 1000)}`,
+        imageUrl: `https://picsum.photos/seed/${fixedSeed}/1600/900`,
         publishedAt: new Date().toISOString(),
         isAiGenerated: true,
         isBreaking: Math.random() > 0.7,
