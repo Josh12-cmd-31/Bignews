@@ -1,5 +1,5 @@
 
-export type Category = 'For You' | 'Technology' | 'Politics' | 'Health' | 'Lifestyle' | 'Sports' | 'Food' | 'Business' | 'Science' | 'Entertainment' | 'Videos' | 'Bookmarks';
+export type Category = 'For You' | 'Trending' | 'Technology' | 'Politics' | 'Health' | 'Lifestyle' | 'Sports' | 'Food' | 'Business' | 'Science' | 'Education' | 'Entertainment' | 'Videos' | 'Bookmarks';
 
 export interface Comment {
   id: string;
@@ -8,6 +8,7 @@ export interface Comment {
   userAvatarUrl?: string;
   text: string;
   date: string;
+  replies?: Comment[];
 }
 
 export interface UserProfile {

@@ -15,7 +15,7 @@ const articleSchema = {
     category: { 
       type: Type.STRING, 
       description: "The most fitting category for this article.",
-      enum: ['Technology', 'Politics', 'Health', 'Lifestyle', 'Sports', 'Food', 'Business', 'Science', 'Entertainment']
+      enum: ['Technology', 'Politics', 'Health', 'Lifestyle', 'Sports', 'Food', 'Business', 'Science', 'Education', 'Entertainment']
     },
     tags: {
       type: Type.ARRAY,
@@ -32,7 +32,7 @@ export const generateArticleContent = async (input: string, mode: 'topic' | 'url
     if (mode === 'url') {
       prompt = `Analyze this URL string: "${input}". infer the news topic from the URL structure (slug) and write a professional news article about it. If the URL is generic, write a general breaking news article. Ensure the tone is professional and journalistic. Generate an impactful subject banner text as well.`;
     } else if (mode === 'automation') {
-       prompt = `Write a deep-dive professional news report on the trending topic: "${input}". Include analysis, quotes (simulated but realistic), and future implications. Use HTML <p> tags for formatting. Generate an impactful subject banner text as well.`;
+       prompt = `Write a deep-dive professional news report on the trending topic: "${input}". Use Google Search to find current facts, recent developments, and expert opinions from today. Include analysis and future implications. Use HTML <p> tags for formatting. Generate an impactful subject banner text as well.`;
     } else {
       prompt = `Write a news article about: ${input}. ensure the tone is professional and journalistic. Generate an impactful subject banner text as well.`;
     }
@@ -41,6 +41,7 @@ export const generateArticleContent = async (input: string, mode: 'topic' | 'url
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
+        tools: mode === 'automation' ? [{googleSearch: {}}] : undefined,
         responseMimeType: "application/json",
         responseSchema: articleSchema,
         systemInstruction: "You are a professional lead journalist for a major news network called 'Big News'. You write engaging, factual, and well-structured articles."
@@ -58,7 +59,8 @@ export const generateArticleContent = async (input: string, mode: 'topic' | 'url
 };
 
 export const identifyTrendingTopic = async (categories: string[]): Promise<{topic: string, category: Category}> => {
-  const prompt = `Based on today's likely global trends, suggest ONE specific, highly engaging news topic for an article in one of these categories: ${categories.join(', ')}. Return your answer as a JSON object with two fields: "topic" (a specific subject line) and "category" (from the list provided).`;
+  // Use Google Search to find REAL current trends
+  const prompt = `Search for today's most trending and impactful news globally in these categories: ${categories.join(', ')}. Pick ONE specific, high-engagement story that is breaking right now. Return a JSON object with "topic" (the specific news event) and "category" (the most relevant category from the provided list).`;
   
   const schema = {
     type: Type.OBJECT,
@@ -73,8 +75,10 @@ export const identifyTrendingTopic = async (categories: string[]): Promise<{topi
     model: 'gemini-3-flash-preview',
     contents: prompt,
     config: {
+      tools: [{googleSearch: {}}],
       responseMimeType: "application/json",
-      responseSchema: schema
+      responseSchema: schema,
+      systemInstruction: "You are a trend-spotting bot for Big News. Your goal is to find real-world, high-traffic news events happening TODAY."
     }
   });
 

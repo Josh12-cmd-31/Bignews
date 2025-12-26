@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Article, UserPreferences, Comment, MonetizationConfig, Video } from '../types';
-import { X, Clock, User, Share2, Heart, MessageSquare, Send, Gift, ShieldCheck, Check, Bookmark } from 'lucide-react';
+import { X, Clock, User, Share2, Heart, MessageSquare, Send, Gift, ShieldCheck, Check, Bookmark, Reply } from 'lucide-react';
 import Logo from './Logo';
 
 interface ArticleModalProps {
@@ -27,6 +27,8 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [guestName, setGuestName] = useState('Guest');
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   useEffect(() => {
     const storedName = localStorage.getItem('bigNewsGuestName');
@@ -35,6 +37,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
 
   useEffect(() => {
     setIsLiked(false);
+    setReplyingTo(null);
   }, [article?.id]);
 
   if (!article) return null;
@@ -52,6 +55,101 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
     setIsLiked(true);
     onUpdateArticle({ ...article, likes: (article.likes || 0) + 1 });
   };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+
+    const comment: Comment = {
+      id: Date.now().toString(),
+      userId: 'guest',
+      user: guestName,
+      text: newComment,
+      date: new Date().toISOString(),
+      replies: []
+    };
+
+    onUpdateArticle({
+      ...article,
+      userComments: [comment, ...(article.userComments || [])],
+      comments: (article.comments || 0) + 1
+    });
+    setNewComment('');
+  };
+
+  const handleAddReply = (parentId: string) => {
+    if (!replyText.trim()) return;
+
+    const reply: Comment = {
+      id: Date.now().toString(),
+      userId: 'guest',
+      user: guestName,
+      text: replyText,
+      date: new Date().toISOString()
+    };
+
+    const updatedComments = (article.userComments || []).map(c => {
+      if (c.id === parentId) {
+        return { ...c, replies: [...(c.replies || []), reply] };
+      }
+      return c;
+    });
+
+    onUpdateArticle({
+      ...article,
+      userComments: updatedComments,
+      comments: (article.comments || 0) + 1
+    });
+    setReplyText('');
+    setReplyingTo(null);
+  };
+
+  // Fix: Explicitly using React.FC to allow 'key' prop which is required for mapped components
+  const CommentItem: React.FC<{ c: Comment, isReply?: boolean }> = ({ c, isReply = false }) => (
+    <div className={`${isReply ? 'mt-4 ml-8' : 'pb-6 border-b last:border-0 mb-6'} ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+      <div className="flex justify-between text-xs font-bold mb-2">
+        <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>{c.user}</span> 
+        <span className="text-slate-400">{new Date(c.date).toLocaleDateString()}</span>
+      </div>
+      <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{c.text}</p>
+      
+      {!isReply && (
+        <div className="mt-3 flex items-center gap-4">
+          <button 
+            onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
+            className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${isDark ? 'text-slate-500 hover:text-blue-400' : 'text-slate-500 hover:text-blue-600'}`}
+          >
+            <Reply size={14} /> Reply
+          </button>
+        </div>
+      )}
+
+      {replyingTo === c.id && (
+        <div className="mt-4 ml-8 animate-in slide-in-from-top-2 duration-200">
+          <div className="flex gap-2">
+            <input 
+              type="text" 
+              autoFocus
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="Write a reply..." 
+              className={`flex-1 p-2 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} 
+            />
+            <button 
+              onClick={() => handleAddReply(c.id)}
+              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {c.replies && c.replies.map(reply => (
+        <CommentItem key={reply.id} c={reply} isReply />
+      ))}
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
@@ -112,26 +210,27 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
             </div>
           </div>
 
-          <div className={`mt-10 pt-10 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+          <div className={`mt-12 pt-10 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
              <button onClick={handleLike} className={`flex items-center gap-2 px-6 py-2 rounded-full border transition-all ${isLiked ? 'bg-rose-50 text-rose-500 border-rose-200' : isDark ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-50'}`}>
                <Heart size={20} className={isLiked ? 'fill-current' : ''} /> 
                <span className="font-bold">{article.likes}</span>
              </button>
 
              <div className="mt-12">
-               <h4 className="text-xl font-bold mb-6 flex items-center gap-2"><MessageSquare size={20} />Comments ({article.userComments?.length || 0})</h4>
-               <form onSubmit={(e) => e.preventDefault()} className="flex gap-2 mb-8">
-                 <input type="text" placeholder="Add a comment..." className={`flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`} />
+               <h4 className="text-xl font-bold mb-6 flex items-center gap-2"><MessageSquare size={20} />Comments ({article.comments || 0})</h4>
+               <form onSubmit={handleAddComment} className="flex gap-2 mb-8">
+                 <input 
+                  type="text" 
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Add a comment..." 
+                  className={`flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`} 
+                 />
                  <button type="submit" className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"><Send size={18} /></button>
                </form>
-               <div className="space-y-6">
+               <div className="space-y-2">
                  {article.userComments && article.userComments.length > 0 ? (
-                   article.userComments.map(c => (
-                     <div key={c.id} className={`pb-6 border-b last:border-0 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
-                       <div className="flex justify-between text-xs font-bold mb-2"><span className={isDark ? 'text-blue-400' : 'text-blue-600'}>{c.user}</span> <span className="text-slate-400">{new Date(c.date).toLocaleDateString()}</span></div>
-                       <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{c.text}</p>
-                     </div>
-                   ))
+                   article.userComments.map(c => <CommentItem key={c.id} c={c} />)
                  ) : (
                    <div className="text-center py-10 text-slate-400 text-sm italic">No comments yet.</div>
                  )}

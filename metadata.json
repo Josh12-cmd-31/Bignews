@@ -13,6 +13,7 @@
     "react news app"
   ],
   "requestFramePermissions": [
-    "geolocation"
+    "geolocation",
+    "microphone"
   ]
 }

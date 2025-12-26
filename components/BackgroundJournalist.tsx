@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Article, AutomationConfig, AutomationLog, Category } from '../types';
 import { generateArticleContent, identifyTrendingTopic } from '../services/geminiService';
-import { Bot, Zap, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { Bot, Zap, CheckCircle2, AlertCircle, X, ShieldCheck, Search } from 'lucide-react';
 
 interface BackgroundJournalistProps {
   config: AutomationConfig;
@@ -20,15 +20,37 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
   isAuthenticated
 }) => {
   const [notification, setNotification] = useState<{title: string, id: string} | null>(null);
+  const [status, setStatus] = useState<'idle' | 'researching' | 'writing' | 'publishing'>('idle');
   const isRunningRef = useRef(false);
+  const channelRef = useRef<BroadcastChannel | null>(null);
 
-  // Tab Locking Logic: Ensures only one open tab runs the automation
+  useEffect(() => {
+    // Initialize cross-tab communication
+    channelRef.current = new BroadcastChannel('big_news_automation_sync');
+    
+    channelRef.current.onmessage = (event) => {
+      const { type, payload } = event.data;
+      if (type === 'NEW_ARTICLE') {
+        onNewArticle(payload);
+        setNotification({ title: payload.title, id: payload.id });
+        setTimeout(() => setNotification(null), 8000);
+      } else if (type === 'LOG') {
+        onNewLog(payload);
+      }
+    };
+
+    return () => {
+      channelRef.current?.close();
+    };
+  }, [onNewArticle, onNewLog]);
+
   const acquireLock = () => {
     const lockKey = 'bigNews_automation_lock';
     const now = Date.now();
     const lock = localStorage.getItem(lockKey);
     
-    if (!lock || now - parseInt(lock) > 30000) { // Lock expires after 30s
+    // Lock is valid if it's less than 30s old
+    if (!lock || now - parseInt(lock) > 30000) {
       localStorage.setItem(lockKey, now.toString());
       return true;
     }
@@ -37,17 +59,19 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
 
   const runTask = async () => {
     if (isRunningRef.current || !config.enabled) return;
-    
-    // Only attempt if we can get the lock
     if (!acquireLock()) return;
 
     isRunningRef.current = true;
     onUpdateConfig({ ...config, isCurrentlyRunning: true });
 
     try {
+      setStatus('researching');
       const { topic, category } = await identifyTrendingTopic(config.autoCategories as string[]);
+      
+      setStatus('writing');
       const generated = await generateArticleContent(topic, 'automation');
       
+      setStatus('publishing');
       const fixedSeed = Date.now();
       const newArticle: Article = {
         id: `auto-${fixedSeed}`,
@@ -68,16 +92,22 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
         userComments: []
       };
 
-      onNewArticle(newArticle);
-      onNewLog({
+      const log: AutomationLog = {
         id: Date.now().toString(),
         timestamp: new Date().toISOString(),
         status: 'success',
         articleTitle: newArticle.title,
-        message: 'Auto-published in background'
-      });
+        message: `Auto-published via Real-time Background Agent`
+      };
 
-      // Show toast notification
+      // Update local state
+      onNewArticle(newArticle);
+      onNewLog(log);
+      
+      // Notify other tabs
+      channelRef.current?.postMessage({ type: 'NEW_ARTICLE', payload: newArticle });
+      channelRef.current?.postMessage({ type: 'LOG', payload: log });
+
       setNotification({ title: newArticle.title, id: newArticle.id });
       setTimeout(() => setNotification(null), 8000);
 
@@ -87,15 +117,18 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
         isCurrentlyRunning: false 
       });
     } catch (error) {
-      onNewLog({
+      const errorLog: AutomationLog = {
         id: Date.now().toString(),
         timestamp: new Date().toISOString(),
         status: 'error',
-        message: 'Background AI error: Connection failed'
-      });
+        message: 'Agent encountered a neural link failure. Retrying next cycle.'
+      };
+      onNewLog(errorLog);
+      channelRef.current?.postMessage({ type: 'LOG', payload: errorLog });
       onUpdateConfig({ ...config, isCurrentlyRunning: false });
     } finally {
       isRunningRef.current = false;
+      setStatus('idle');
       localStorage.removeItem('bigNews_automation_lock');
     }
   };
@@ -112,40 +145,52 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
         runTask();
       }
       
-      // Heartbeat for lock (if we hold it)
-      const lockKey = 'bigNews_automation_lock';
-      const lock = localStorage.getItem(lockKey);
-      if (lock && isRunningRef.current) {
-        localStorage.setItem(lockKey, Date.now().toString());
+      // Update lock heartbeat
+      if (isRunningRef.current) {
+        localStorage.setItem('bigNews_automation_lock', Date.now().toString());
       }
-    }, 15000); // Check every 15s
+    }, 10000); // Check every 10s for better responsiveness
 
     return () => clearInterval(intervalId);
   }, [config.enabled, config.lastRunAt, config.intervalMinutes]);
 
-  if (!notification) return null;
+  if (!notification && status === 'idle') return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-right-10 duration-500">
-      <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-blue-500/30 flex items-start gap-4 max-w-sm">
-        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
-          <Bot size={20} className="animate-pulse" />
+    <div className="fixed bottom-6 right-6 z-[200] space-y-3 pointer-events-none">
+      {/* Bot Status Indicator (Visible for Admins or when doing work) */}
+      {(status !== 'idle' || isAuthenticated) && config.enabled && (
+        <div className={`bg-slate-900/90 backdrop-blur-md border px-4 py-2 rounded-full flex items-center gap-3 shadow-2xl transition-all duration-500 pointer-events-auto ${status !== 'idle' ? 'border-blue-500 scale-105' : 'border-slate-800 opacity-60'}`}>
+           <div className={`w-2 h-2 rounded-full ${status !== 'idle' ? 'bg-blue-500 animate-pulse' : 'bg-slate-600'}`}></div>
+           <Bot size={14} className={`text-blue-400 ${status !== 'idle' ? 'animate-bounce' : ''}`} />
+           <span className="text-[10px] font-black uppercase tracking-widest text-white">
+             {status === 'idle' ? 'AI Agent Monitoring' : `AI Agent ${status}...`}
+           </span>
         </div>
-        <div className="flex-1 min-w-0 pr-6">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">AI Journalist Pro</span>
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></span>
+      )}
+
+      {/* New Article Notification */}
+      {notification && (
+        <div className="bg-white text-slate-900 p-5 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-blue-50 flex items-start gap-4 max-w-sm animate-in slide-in-from-right-10 duration-500 pointer-events-auto">
+          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20 text-white">
+            <Zap size={24} fill="white" />
           </div>
-          <h4 className="text-sm font-bold truncate leading-tight">Just Published: {notification.title}</h4>
-          <p className="text-[11px] text-slate-400 mt-1">A new story has been automatically added to the feed.</p>
+          <div className="flex-1 min-w-0 pr-6">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Flash Report</span>
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></span>
+            </div>
+            <h4 className="text-sm font-black font-serif truncate leading-tight">{notification.title}</h4>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">Auto-published by the Background Journalist.</p>
+          </div>
+          <button 
+            onClick={() => setNotification(null)}
+            className="absolute top-4 right-4 p-1 text-slate-300 hover:text-slate-900 transition-colors"
+          >
+            <X size={20} />
+          </button>
         </div>
-        <button 
-          onClick={() => setNotification(null)}
-          className="absolute top-2 right-2 p-1 text-slate-500 hover:text-white transition-colors"
-        >
-          <X size={16} />
-        </button>
-      </div>
+      )}
     </div>
   );
 };

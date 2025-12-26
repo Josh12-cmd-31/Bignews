@@ -3,6 +3,7 @@ import { Article, Category, Video } from './types';
 
 export const CATEGORIES: Category[] = [
   'For You',
+  'Trending',
   'Technology',
   'Politics',
   'Health',
@@ -11,6 +12,7 @@ export const CATEGORIES: Category[] = [
   'Food',
   'Business',
   'Science',
+  'Education',
   'Entertainment',
   'Videos',
   'Bookmarks'
@@ -66,6 +68,25 @@ export const MOCK_ARTICLES: Article[] = [
     comments: 230,
     userComments: [],
     isBreaking: true,
+  },
+  {
+    id: 'edu-future',
+    title: 'The Rise of AI Tutors in Global Classrooms',
+    subject: 'EDUCATION REVOLUTION',
+    summary: 'Personalized learning reaches new heights as adaptive AI systems enter primary schools.',
+    content: `
+      <p>From London to Nairobi, the classroom experience is undergoing a digital metamorphosis. A new generation of AI-driven tutoring systems is providing personalized feedback to students in real-time, bridging the gap between classroom teaching and individual needs.</p>
+      <p>Critics warn of the "digital divide," but proponents argue that low-cost AI models could bring high-quality education to remote areas where teachers are scarce.</p>
+    `,
+    category: 'Education',
+    author: 'Elena Vance',
+    imageUrl: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1600&h=900&q=80',
+    publishedAt: new Date().toISOString(),
+    tags: ['Education', 'AI', 'Learning', 'EdTech'],
+    views: 45000,
+    likes: 3200,
+    comments: 85,
+    userComments: [],
   },
   {
     id: 'police-peace-news',

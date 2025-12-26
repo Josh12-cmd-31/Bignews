@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Article, Category, UserPreferences, MonetizationConfig, Video, AutomationConfig, AutomationLog, WalletState, Transaction, UserProfile } from './types';
 import { MOCK_ARTICLES, CATEGORIES, MOCK_VIDEOS } from './constants';
@@ -9,15 +10,17 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import LoginModal from './components/LoginModal';
 import FeedbackModal from './components/FeedbackModal';
 import SettingsModal from './components/SettingsModal';
-import ProfileModal from './components/ProfileModal';
+import UserDashboard from './components/UserDashboard';
 import MonetizationPanel from './components/MonetizationPanel';
 import AutomationPanel from './components/AutomationPanel';
 import DonationModal from './components/DonationModal';
 import VideoManager from './components/VideoManager';
 import VideoFeed from './components/VideoFeed';
 import BackgroundJournalist from './components/BackgroundJournalist';
+import LegalModal from './components/LegalModal';
+import Chatter from './components/Chatter';
 import Logo from './components/Logo';
-import { Menu, Shield, Search, LogOut, Lock, Settings, Heart, Bookmark, User as UserIcon, Activity, X, ChevronRight, ChevronLeft, LayoutDashboard, PenLine, DollarSign, Film, Bot } from 'lucide-react';
+import { Menu, Shield, Search, LogOut, Lock, Settings, Heart, Bookmark, User as UserIcon, Activity, X, ChevronRight, ChevronLeft, LayoutDashboard, PenLine, DollarSign, Film, Bot, Flame, Sparkles, MessageCircle, BrainCircuit } from 'lucide-react';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -28,7 +31,10 @@ const App: React.FC = () => {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isUserDashboardOpen, setIsUserDashboardOpen] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [isChatterOpen, setIsChatterOpen] = useState(false);
+  const [legalType, setLegalType] = useState<'terms' | 'privacy'>('terms');
   
   const [articles, setArticles] = useState<Article[]>(() => {
     const saved = localStorage.getItem('bigNewsArticles');
@@ -72,7 +78,7 @@ const App: React.FC = () => {
 
   const [automation, setAutomation] = useState<AutomationConfig>(() => {
     const saved = localStorage.getItem('bigNewsAutomationConfig');
-    return saved ? JSON.parse(saved) : { enabled: false, intervalMinutes: 10, autoCategories: ['Technology', 'Business', 'Science', 'Politics'], isCurrentlyRunning: false };
+    return saved ? JSON.parse(saved) : { enabled: false, intervalMinutes: 10, autoCategories: ['Technology', 'Business', 'Science', 'Politics', 'Education'], isCurrentlyRunning: false };
   });
 
   const [automationLogs, setAutomationLogs] = useState<AutomationLog[]>(() => {
@@ -94,7 +100,7 @@ const App: React.FC = () => {
 
   const toggleBookmark = (articleId: string) => {
     if (!userProfile) {
-      setIsProfileModalOpen(true);
+      setIsUserDashboardOpen(true);
       return;
     }
     setBookmarks(prev => prev.includes(articleId) ? prev.filter(id => id !== articleId) : [...prev, articleId]);
@@ -132,12 +138,20 @@ const App: React.FC = () => {
   const filteredArticles = articles.filter(a => {
     const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          a.summary.toLowerCase().includes(searchQuery.toLowerCase());
+    
     if (selectedCategory === 'Bookmarks') return bookmarks.includes(a.id) && matchesSearch;
     if (selectedCategory === 'For You') return matchesSearch;
+    if (selectedCategory === 'Trending') return matchesSearch; // All articles for trending pool
     if (selectedCategory === 'Videos') return false;
+    
     return a.category === selectedCategory && matchesSearch;
   }).sort((a, b) => {
-    if (selectedCategory === 'For You') return 0; // Natural order (latest first usually)
+    if (selectedCategory === 'Trending') {
+      const scoreA = (a.views || 0) + ((a.likes || 0) * 10) + ((a.comments || 0) * 20);
+      const scoreB = (b.views || 0) + ((b.likes || 0) * 10) + ((b.comments || 0) * 20);
+      return scoreB - scoreA;
+    }
+    if (selectedCategory === 'For You') return 0;
     return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
   });
 
@@ -145,6 +159,18 @@ const App: React.FC = () => {
   const currentArticles = filteredArticles.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const isDark = preferences.theme === 'dark';
+
+  const openLegal = (type: 'terms' | 'privacy') => {
+    setLegalType(type);
+    setIsLegalModalOpen(true);
+  };
+
+  // Mock User Stats for Dashboard
+  const userStats = {
+    articlesRead: 42, // Simulated
+    bookmarks: bookmarks.length,
+    comments: 12 // Simulated
+  };
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${isDark ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-900'}`}>
@@ -155,6 +181,15 @@ const App: React.FC = () => {
         onNewLog={handleNewBackgroundLog}
         isAuthenticated={isAuthenticated}
       />
+
+      {/* Floating Chatter Launch Button */}
+      <button 
+        onClick={() => setIsChatterOpen(true)}
+        className="fixed bottom-24 right-6 z-[190] w-14 h-14 bg-blue-600 text-white rounded-[1.25rem] shadow-[0_20px_40px_-8px_rgba(37,99,235,0.4)] hover:scale-110 active:scale-90 transition-all flex items-center justify-center group"
+      >
+        <Sparkles size={24} className="group-hover:rotate-12 transition-transform" />
+        <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></div>
+      </button>
 
       <BreakingNewsBanner articles={articles} onArticleClick={setSelectedArticle} />
       
@@ -183,14 +218,29 @@ const App: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Prominent Donation Button */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Chatter AI Button in TOP RIGHT CORNER - High Visibility */}
+            <button 
+              onClick={() => setIsChatterOpen(true)}
+              className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full font-black text-xs uppercase tracking-wider transition-all border group relative overflow-hidden shadow-sm hover:shadow-md ${
+                isDark 
+                  ? 'border-blue-500/40 text-blue-400 bg-blue-900/20 hover:bg-blue-900/40' 
+                  : 'border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100'
+              }`}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              <BrainCircuit size={16} className="group-hover:scale-110 transition-transform text-blue-500" />
+              <span>Chatter AI</span>
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+            </button>
+
+            {/* Support Button */}
             <button 
               onClick={() => setIsDonationModalOpen(true)}
               className={`flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-lg hover:shadow-rose-500/20 active:scale-95 group ${isDark ? 'bg-rose-600 text-white hover:bg-rose-500' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
             >
               <Heart size={16} className="fill-current group-hover:animate-pulse" />
-              <span className="hidden md:inline">Support Us</span>
+              <span className="hidden md:inline">Support</span>
             </button>
 
             <button 
@@ -223,7 +273,7 @@ const App: React.FC = () => {
                 className="flex items-center gap-2 text-sm font-bold p-2 hover:text-blue-600 transition-colors"
               >
                 <Lock size={18} />
-                <span className="hidden sm:inline">Admin Access</span>
+                <span className="hidden sm:inline">Admin</span>
               </button>
             )}
 
@@ -231,7 +281,7 @@ const App: React.FC = () => {
 
             {userProfile ? (
               <button 
-                onClick={() => setIsProfileModalOpen(true)}
+                onClick={() => setIsUserDashboardOpen(true)}
                 className={`flex items-center gap-2 p-1 pr-3 rounded-full border transition-all hover:shadow-md ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
               >
                 <div className={`w-8 h-8 rounded-full ${userProfile.avatarColor} flex items-center justify-center text-white font-black text-xs`}>
@@ -241,7 +291,7 @@ const App: React.FC = () => {
               </button>
             ) : (
               <button 
-                onClick={() => setIsProfileModalOpen(true)}
+                onClick={() => setIsUserDashboardOpen(true)}
                 className={`p-2 rounded-full ${isDark ? 'bg-slate-800 text-blue-400' : 'bg-blue-50 text-blue-600'}`}
               >
                 <UserIcon size={20} />
@@ -257,8 +307,9 @@ const App: React.FC = () => {
               <button
                 key={category}
                 onClick={() => { setSelectedCategory(category); setShowAdminDashboard(false); setCurrentPage(1); }}
-                className={`px-4 py-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all relative group`}
+                className={`px-4 py-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all relative group flex items-center gap-2`}
               >
+                {category === 'Trending' && <Flame size={12} className={selectedCategory === 'Trending' ? 'text-orange-500' : 'text-slate-400'} />}
                 <span className={selectedCategory === category ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}>
                   {category}
                 </span>
@@ -313,6 +364,7 @@ const App: React.FC = () => {
                <h2 className="text-3xl sm:text-4xl font-black font-serif flex items-center gap-3">
                  {selectedCategory}
                  {selectedCategory === 'Bookmarks' && <span className="text-sm font-sans font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{bookmarks.length}</span>}
+                 {selectedCategory === 'Trending' && <Flame className="text-orange-500 animate-pulse" size={32} />}
                </h2>
                <div className="flex items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
                   Showing {currentArticles.length} of {filteredArticles.length}
@@ -391,8 +443,8 @@ const App: React.FC = () => {
             <div className="flex flex-wrap justify-center gap-6">
                <button onClick={() => setIsFeedbackModalOpen(true)} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">Feedback</button>
                <button onClick={() => setIsDonationModalOpen(true)} className="text-xs font-bold uppercase tracking-widest text-rose-500 hover:text-rose-600 transition-colors">Support Us</button>
-               <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Privacy</span>
-               <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Terms</span>
+               <button onClick={() => openLegal('privacy')} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">Privacy</button>
+               <button onClick={() => openLegal('terms')} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">Terms</button>
             </div>
             <div className="flex items-center gap-4">
                <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full text-[10px] font-black uppercase tracking-tighter">
@@ -439,12 +491,28 @@ const App: React.FC = () => {
         isDark={isDark}
       />
 
-      <ProfileModal 
-        isOpen={isProfileModalOpen} 
-        onClose={() => setIsProfileModalOpen(false)} 
+      <UserDashboard 
+        isOpen={isUserDashboardOpen} 
+        onClose={() => setIsUserDashboardOpen(false)} 
         userProfile={userProfile} 
         onUpdateProfile={setUserProfile} 
         isDark={isDark} 
+        onOpenChatter={() => { setIsUserDashboardOpen(false); setIsChatterOpen(true); }}
+        stats={userStats}
+      />
+
+      <LegalModal 
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        type={legalType}
+        isDark={isDark}
+      />
+
+      <Chatter 
+        isOpen={isChatterOpen}
+        onClose={() => setIsChatterOpen(false)}
+        isDark={isDark}
+        userName={userProfile?.name}
       />
 
       {/* Mobile Menu Overlay */}
