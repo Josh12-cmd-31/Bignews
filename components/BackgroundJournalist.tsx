@@ -36,6 +36,8 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
         setTimeout(() => setNotification(null), 8000);
       } else if (type === 'LOG') {
         onNewLog(payload);
+      } else if (type === 'FORCE_RUN' && !isRunningRef.current) {
+        runTask();
       }
     };
 
@@ -49,7 +51,7 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
     const now = Date.now();
     const lock = localStorage.getItem(lockKey);
     
-    // Lock is valid if it's less than 30s old
+    // Lock is valid if it's less than 30s old. If it's older, assume the previous tab crashed.
     if (!lock || now - parseInt(lock) > 30000) {
       localStorage.setItem(lockKey, now.toString());
       return true;
@@ -58,7 +60,7 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
   };
 
   const runTask = async () => {
-    if (isRunningRef.current || !config.enabled) return;
+    if (isRunningRef.current) return;
     if (!acquireLock()) return;
 
     isRunningRef.current = true;
@@ -66,25 +68,26 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
 
     try {
       setStatus('researching');
-      const { topic, category } = await identifyTrendingTopic(config.autoCategories as string[]);
+      const trackedCategories = config.autoCategories.length > 0 ? config.autoCategories : ['Technology', 'Football', 'Politics'];
+      const trend = await identifyTrendingTopic(trackedCategories as string[]);
       
       setStatus('writing');
-      const generated = await generateArticleContent(topic, 'automation');
+      const generated = await generateArticleContent(trend.topic, 'automation');
       
       setStatus('publishing');
       const fixedSeed = Date.now();
       const newArticle: Article = {
         id: `auto-${fixedSeed}`,
         title: generated.title,
-        subject: generated.subject || 'BREAKING UPDATE',
+        subject: generated.subject || 'AI BREAKING UPDATE',
         summary: generated.summary,
         content: generated.content,
-        category: (generated.category as Category) || (category as Category),
-        author: 'Big News AI Bot',
+        category: (generated.category as Category) || (trend.category as Category) || 'Technology',
+        author: 'Big News AI Journalist',
         imageUrl: `https://picsum.photos/seed/${fixedSeed}/1600/900`,
         publishedAt: new Date().toISOString(),
         isAiGenerated: true,
-        isBreaking: Math.random() > 0.7,
+        isBreaking: Math.random() > 0.6,
         tags: generated.tags || [],
         views: 0,
         likes: 0,
@@ -97,7 +100,7 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
         timestamp: new Date().toISOString(),
         status: 'success',
         articleTitle: newArticle.title,
-        message: `Auto-published via Real-time Background Agent`
+        message: `Neural synthesis complete. Published report on ${newArticle.category}.`
       };
 
       // Update local state
@@ -117,11 +120,13 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
         isCurrentlyRunning: false 
       });
     } catch (error) {
+      console.error("AI Journalist error:", error);
+      const logMsg = error instanceof Error ? error.message : 'Unknown neural link failure.';
       const errorLog: AutomationLog = {
         id: Date.now().toString(),
         timestamp: new Date().toISOString(),
         status: 'error',
-        message: 'Agent encountered a neural link failure. Retrying next cycle.'
+        message: `Task interrupted: ${logMsg.substring(0, 80)}...`
       };
       onNewLog(errorLog);
       channelRef.current?.postMessage({ type: 'LOG', payload: errorLog });
@@ -145,11 +150,11 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
         runTask();
       }
       
-      // Update lock heartbeat
+      // Update lock heartbeat if this tab is the one running
       if (isRunningRef.current) {
         localStorage.setItem('bigNews_automation_lock', Date.now().toString());
       }
-    }, 10000); // Check every 10s for better responsiveness
+    }, 10000); 
 
     return () => clearInterval(intervalId);
   }, [config.enabled, config.lastRunAt, config.intervalMinutes]);
@@ -158,13 +163,13 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
 
   return (
     <div className="fixed bottom-6 right-6 z-[200] space-y-3 pointer-events-none">
-      {/* Bot Status Indicator (Visible for Admins or when doing work) */}
+      {/* Bot Status Indicator */}
       {(status !== 'idle' || isAuthenticated) && config.enabled && (
         <div className={`bg-slate-900/90 backdrop-blur-md border px-4 py-2 rounded-full flex items-center gap-3 shadow-2xl transition-all duration-500 pointer-events-auto ${status !== 'idle' ? 'border-blue-500 scale-105' : 'border-slate-800 opacity-60'}`}>
-           <div className={`w-2 h-2 rounded-full ${status !== 'idle' ? 'bg-blue-500 animate-pulse' : 'bg-slate-600'}`}></div>
+           <div className={`w-2 h-2 rounded-full ${status !== 'idle' ? 'bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.6)]' : 'bg-slate-600'}`}></div>
            <Bot size={14} className={`text-blue-400 ${status !== 'idle' ? 'animate-bounce' : ''}`} />
            <span className="text-[10px] font-black uppercase tracking-widest text-white">
-             {status === 'idle' ? 'AI Agent Monitoring' : `AI Agent ${status}...`}
+             {status === 'idle' ? 'Journalist Active' : `${status}...`}
            </span>
         </div>
       )}
@@ -181,7 +186,7 @@ const BackgroundJournalist: React.FC<BackgroundJournalistProps> = ({
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></span>
             </div>
             <h4 className="text-sm font-black font-serif truncate leading-tight">{notification.title}</h4>
-            <p className="text-[11px] text-slate-500 mt-1 font-medium">Auto-published by the Background Journalist.</p>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">Published by AI Core.</p>
           </div>
           <button 
             onClick={() => setNotification(null)}

@@ -110,8 +110,8 @@ const App: React.FC = () => {
   const [automation, setAutomation] = useState<AutomationConfig>(() => {
     try {
       const saved = localStorage.getItem('bigNewsAutomationConfig');
-      return saved ? JSON.parse(saved) : { enabled: false, intervalMinutes: 10, autoCategories: ['Technology', 'Business', 'Science', 'Politics', 'Education'], isCurrentlyRunning: false };
-    } catch(e) { return { enabled: false, intervalMinutes: 10, autoCategories: [], isCurrentlyRunning: false }; }
+      return saved ? JSON.parse(saved) : { enabled: false, intervalMinutes: 10, autoCategories: ['Technology', 'Business', 'Football', 'Science', 'Politics', 'Education'], isCurrentlyRunning: false };
+    } catch(e) { return { enabled: false, intervalMinutes: 10, autoCategories: ['Technology', 'Football'], isCurrentlyRunning: false }; }
   });
 
   const [automationLogs, setAutomationLogs] = useState<AutomationLog[]>(() => {
@@ -271,7 +271,7 @@ const App: React.FC = () => {
 
             <button 
               onClick={() => setIsDonationModalOpen(true)}
-              className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-lg hover:shadow-rose-500/20 active:scale-95 group ${isDark ? 'bg-rose-600 text-white hover:bg-rose-500' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
+              className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-lg hover:shadow-rose-500/20 active:scale-95 group ${isDark ? 'bg-rose-600 text-white hover:bg-rose-500' : 'bg-rose-50 text-white hover:bg-rose-600'}`}
             >
               <Heart size={16} className="fill-current group-hover:animate-pulse" />
               <span>Support</span>

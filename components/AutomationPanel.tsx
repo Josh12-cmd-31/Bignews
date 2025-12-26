@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AutomationConfig, AutomationLog, Category } from '../types';
-import { Bot, Play, Pause, Clock, History, AlertCircle, CheckCircle2, Cpu, Zap, Settings, RefreshCw } from 'lucide-react';
+import { Bot, Play, Pause, Clock, History, AlertCircle, CheckCircle2, Cpu, Zap, Settings, RefreshCw, Sparkles } from 'lucide-react';
 
 interface AutomationPanelProps {
   config: AutomationConfig;
@@ -39,21 +39,23 @@ const AutomationPanel: React.FC<AutomationPanelProps> = ({ config, onUpdate, log
     onUpdate({
       ...config,
       enabled: !config.enabled,
-      // To ensure immediate start upon activation, we only set lastRunAt if turning it ON for the first time
-      // or if it has never run. Setting it to 0 forces the threshold check in App.tsx to pass.
-      lastRunAt: !config.enabled && !config.lastRunAt ? new Date(0).toISOString() : config.lastRunAt
+      lastRunAt: !config.enabled ? new Date(0).toISOString() : config.lastRunAt
     });
+  };
+
+  const forceTrigger = () => {
+    if (config.isCurrentlyRunning) return;
+    const channel = new BroadcastChannel('big_news_automation_sync');
+    channel.postMessage({ type: 'FORCE_RUN' });
+    channel.close();
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Master Control Card */}
       <div className={`relative overflow-hidden p-8 rounded-2xl shadow-xl border transition-all duration-500 ${config.enabled ? 'bg-slate-900 border-blue-500/50' : 'bg-white border-slate-200'}`}>
-        {/* Background Animation */}
         {config.enabled && (
           <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
              <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-blue-500 rounded-full blur-[120px] animate-pulse"></div>
-             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/20 border-b border-l border-blue-500/30 rounded-bl-3xl"></div>
           </div>
         )}
 
@@ -67,29 +69,39 @@ const AutomationPanel: React.FC<AutomationPanelProps> = ({ config, onUpdate, log
                    AI Journalist Pro
                  </h2>
                  <p className={`text-sm mt-1 font-medium ${config.enabled ? 'text-blue-200' : 'text-slate-500'}`}>
-                   {config.enabled ? 'System active. Researching global trends.' : 'Automated publishing is currently paused.'}
+                   {config.enabled ? 'Autonomous trend analysis active.' : 'Automation service offline.'}
                  </p>
               </div>
            </div>
 
-           <button 
-             onClick={toggleAutomation}
-             className={`group relative flex items-center gap-3 px-8 py-4 rounded-full font-bold text-lg transition-all duration-300 active:scale-95 ${
-               config.enabled 
-                 ? 'bg-red-500/10 border-2 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white' 
-                 : 'bg-blue-600 text-white hover:bg-blue-700 shadow-xl shadow-blue-500/20'
-             }`}
-           >
-              {config.enabled ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
-              {config.enabled ? 'Stop Automation' : 'Start Automation'}
-           </button>
+           <div className="flex gap-3">
+             <button 
+               onClick={forceTrigger}
+               disabled={!config.enabled || config.isCurrentlyRunning}
+               className="flex items-center gap-2 px-6 py-4 rounded-xl font-bold text-sm bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all disabled:opacity-30"
+             >
+               <Sparkles size={18} />
+               Manual Trigger
+             </button>
+             <button 
+               onClick={toggleAutomation}
+               className={`group flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 active:scale-95 ${
+                 config.enabled 
+                   ? 'bg-red-500/10 border-2 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white' 
+                   : 'bg-blue-600 text-white hover:bg-blue-700 shadow-xl shadow-blue-500/20'
+               }`}
+             >
+                {config.enabled ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
+                {config.enabled ? 'Deactivate' : 'Activate'}
+             </button>
+           </div>
         </div>
 
         {config.enabled && (
            <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4">
               <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10">
                  <div className="text-blue-400 text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
-                    <Clock size={12} /> Next Run
+                    <Clock size={12} /> Next Sync
                  </div>
                  <div className="text-3xl font-mono font-bold text-white tabular-nums">
                     {nextRunCounter}
@@ -97,10 +109,10 @@ const AutomationPanel: React.FC<AutomationPanelProps> = ({ config, onUpdate, log
               </div>
               <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10">
                  <div className="text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
-                    <RefreshCw size={12} className={config.isCurrentlyRunning ? 'animate-spin' : ''} /> Status
+                    <RefreshCw size={12} className={config.isCurrentlyRunning ? 'animate-spin' : ''} /> Neural Status
                  </div>
                  <div className="text-xl font-bold text-white">
-                    {config.isCurrentlyRunning ? 'Publishing...' : 'Standby'}
+                    {config.isCurrentlyRunning ? 'Synthesizing...' : 'Monitoring'}
                  </div>
               </div>
               <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10">
@@ -115,9 +127,7 @@ const AutomationPanel: React.FC<AutomationPanelProps> = ({ config, onUpdate, log
         )}
       </div>
 
-      {/* Settings Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         {/* Configuration Side */}
          <div className="lg:col-span-1 space-y-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
@@ -132,30 +142,21 @@ const AutomationPanel: React.FC<AutomationPanelProps> = ({ config, onUpdate, log
                       onChange={(e) => onUpdate({...config, intervalMinutes: Number(e.target.value)})}
                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value={10}>10 Minutes (Fast)</option>
+                      <option value={10}>10 Minutes</option>
                       <option value={15}>15 Minutes</option>
                       <option value={30}>30 Minutes</option>
                       <option value={60}>1 Hour</option>
-                      <option value={120}>2 Hours</option>
                     </select>
                   </div>
                </div>
             </div>
-
-            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3">
-               <AlertCircle className="text-blue-500 shrink-0" size={20} />
-               <p className="text-xs text-blue-800 leading-relaxed">
-                  <strong>How it works:</strong> When active, the bot uses Gemini 3.0 to research trending topics across your news categories and publishes a full journalistic report automatically every 10 minutes.
-               </p>
-            </div>
          </div>
 
-         {/* Logs Side */}
          <div className="lg:col-span-2">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full">
                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                  <History size={18} className="text-slate-400" />
-                 Recent Activity
+                 System Logs
                </h3>
                
                <div className="space-y-3">
@@ -174,16 +175,16 @@ const AutomationPanel: React.FC<AutomationPanelProps> = ({ config, onUpdate, log
                                  {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                </span>
                             </div>
-                            {log.articleTitle && (
-                               <p className="text-xs text-slate-500 font-medium italic">Auto-published successfully</p>
-                            )}
+                            <p className="text-xs text-slate-500 font-medium italic">
+                              {log.status === 'success' ? 'Automated publishing successful.' : log.message}
+                            </p>
                          </div>
                       </div>
                     ))
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
                        <Cpu size={48} className="opacity-10 mb-4" />
-                       <p className="text-sm font-medium">No automation logs available yet.</p>
+                       <p className="text-sm font-medium">No system activity logged.</p>
                     </div>
                   )}
                </div>
