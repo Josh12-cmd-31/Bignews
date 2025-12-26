@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -9,13 +10,16 @@
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
       body {
         font-family: 'Inter', sans-serif;
       }
       h1, h2, h3, h4, h5, h6, .article-content {
         font-family: 'Merriweather', serif;
+      }
+      .font-mono-custom {
+        font-family: 'Roboto Mono', monospace;
       }
       /* Sliding Marquee Animation */
       @keyframes marquee {
@@ -28,6 +32,20 @@
       }
       .animate-marquee:hover {
         animation-play-state: paused;
+      }
+      /* Floating Animation for Verification Codes */
+      @keyframes float {
+        0% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+        33% { transform: translateY(-15px) translateX(8px) rotate(1deg); }
+        66% { transform: translateY(10px) translateX(-8px) rotate(-1deg); }
+        100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+      }
+      .animate-float {
+        animation: float 15s ease-in-out infinite;
+      }
+      .animate-float-delayed {
+        animation: float 18s ease-in-out infinite;
+        animation-delay: -5s;
       }
       /* Hide scrollbar for Chrome, Safari and Opera */
       .no-scrollbar::-webkit-scrollbar {

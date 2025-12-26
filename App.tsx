@@ -20,7 +20,26 @@ import BackgroundJournalist from './components/BackgroundJournalist';
 import LegalModal from './components/LegalModal';
 import Chatter from './components/Chatter';
 import Logo from './components/Logo';
-import { Menu, Shield, Search, LogOut, Lock, Settings, Heart, Bookmark, User as UserIcon, Activity, X, ChevronRight, ChevronLeft, LayoutDashboard, PenLine, DollarSign, Film, Bot, Flame, Sparkles, MessageCircle, BrainCircuit } from 'lucide-react';
+import { Menu, Shield, Search, LogOut, Lock, Settings, Heart, Bookmark, User as UserIcon, Activity, X, ChevronRight, ChevronLeft, LayoutDashboard, PenLine, DollarSign, Film, Bot, Flame, Sparkles, MessageCircle, BrainCircuit, ShieldCheck } from 'lucide-react';
+
+const VerificationCodes: React.FC = () => {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[5] overflow-hidden select-none">
+      <div className="absolute top-[15%] left-[5%] opacity-[0.05] dark:opacity-[0.1] font-mono-custom text-[10px] sm:text-xs font-bold tracking-[0.2em] text-blue-600 dark:text-blue-400 animate-float">
+        SEC-AUTH-X8829-PRIME
+      </div>
+      <div className="absolute top-[40%] right-[8%] opacity-[0.03] dark:opacity-[0.08] font-mono-custom text-[10px] sm:text-xs font-bold tracking-[0.2em] text-slate-600 dark:text-slate-400 animate-float-delayed">
+        VERIFIED-BY-MOVA-AI-CORE
+      </div>
+      <div className="absolute bottom-[20%] left-[12%] opacity-[0.04] dark:opacity-[0.07] font-mono-custom text-[10px] sm:text-xs font-bold tracking-[0.2em] text-emerald-600 dark:text-emerald-400 animate-float">
+        SYNC-PROTOCOL-ALPHA-7
+      </div>
+      <div className="absolute bottom-[10%] right-[25%] opacity-[0.02] dark:opacity-[0.05] font-mono-custom text-[10px] sm:text-xs font-bold tracking-[0.2em] text-rose-600 dark:text-rose-400 animate-float-delayed">
+        BIG-NEWS-INT-ST-001
+      </div>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -173,7 +192,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${isDark ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 relative ${isDark ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-900'}`}>
+      <VerificationCodes />
+      
       <BackgroundJournalist 
         config={automation}
         onUpdateConfig={setAutomation}
