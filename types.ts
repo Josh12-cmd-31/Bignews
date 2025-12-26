@@ -1,5 +1,5 @@
 
-export type Category = 'For You' | 'Trending' | 'Technology' | 'Politics' | 'Health' | 'Lifestyle' | 'Sports' | 'Food' | 'Business' | 'Science' | 'Education' | 'Entertainment' | 'Videos' | 'Bookmarks';
+export type Category = 'For You' | 'Trending' | 'Technology' | 'Politics' | 'Health' | 'Lifestyle' | 'Sports' | 'Football' | 'Food' | 'Business' | 'Science' | 'Education' | 'Entertainment' | 'Videos' | 'Bookmarks';
 
 export interface Comment {
   id: string;

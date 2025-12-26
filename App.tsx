@@ -1,25 +1,25 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Article, Category, UserPreferences, MonetizationConfig, Video, AutomationConfig, AutomationLog, WalletState, Transaction, UserProfile } from './types';
-import { MOCK_ARTICLES, CATEGORIES, MOCK_VIDEOS } from './constants';
-import AdminEditor from './components/AdminEditor';
-import NewsCard from './components/NewsCard';
-import ArticleModal from './components/ArticleModal';
-import BreakingNewsBanner from './components/BreakingNewsBanner';
-import AnalyticsDashboard from './components/AnalyticsDashboard';
-import LoginModal from './components/LoginModal';
-import FeedbackModal from './components/FeedbackModal';
-import SettingsModal from './components/SettingsModal';
-import UserDashboard from './components/UserDashboard';
-import MonetizationPanel from './components/MonetizationPanel';
-import AutomationPanel from './components/AutomationPanel';
-import DonationModal from './components/DonationModal';
-import VideoManager from './components/VideoManager';
-import VideoFeed from './components/VideoFeed';
-import BackgroundJournalist from './components/BackgroundJournalist';
-import LegalModal from './components/LegalModal';
-import Chatter from './components/Chatter';
-import Logo from './components/Logo';
+import { Article, Category, UserPreferences, MonetizationConfig, Video, AutomationConfig, AutomationLog, WalletState, Transaction, UserProfile } from './types.ts';
+import { MOCK_ARTICLES, CATEGORIES, MOCK_VIDEOS } from './constants.ts';
+import AdminEditor from './components/AdminEditor.tsx';
+import NewsCard from './components/NewsCard.tsx';
+import ArticleModal from './components/ArticleModal.tsx';
+import BreakingNewsBanner from './components/BreakingNewsBanner.tsx';
+import AnalyticsDashboard from './components/AnalyticsDashboard.tsx';
+import LoginModal from './components/LoginModal.tsx';
+import FeedbackModal from './components/FeedbackModal.tsx';
+import SettingsModal from './components/SettingsModal.tsx';
+import UserDashboard from './components/UserDashboard.tsx';
+import MonetizationPanel from './components/MonetizationPanel.tsx';
+import AutomationPanel from './components/AutomationPanel.tsx';
+import DonationModal from './components/DonationModal.tsx';
+import VideoManager from './components/VideoManager.tsx';
+import VideoFeed from './components/VideoFeed.tsx';
+import BackgroundJournalist from './components/BackgroundJournalist.tsx';
+import LegalModal from './components/LegalModal.tsx';
+import Chatter from './components/Chatter.tsx';
+import Logo from './components/Logo.tsx';
 import { Menu, Shield, Search, LogOut, Lock, Settings, Heart, Bookmark, User as UserIcon, Activity, X, ChevronRight, ChevronLeft, LayoutDashboard, PenLine, DollarSign, Film, Bot, Flame, Sparkles, MessageCircle, BrainCircuit, ShieldCheck } from 'lucide-react';
 
 const VerificationCodes: React.FC = () => {
@@ -56,23 +56,31 @@ const App: React.FC = () => {
   const [legalType, setLegalType] = useState<'terms' | 'privacy'>('terms');
   
   const [articles, setArticles] = useState<Article[]>(() => {
-    const saved = localStorage.getItem('bigNewsArticles');
-    return saved ? JSON.parse(saved) : MOCK_ARTICLES;
+    try {
+      const saved = localStorage.getItem('bigNewsArticles');
+      return saved ? JSON.parse(saved) : MOCK_ARTICLES;
+    } catch(e) { return MOCK_ARTICLES; }
   });
   
   const [bookmarks, setBookmarks] = useState<string[]>(() => {
-    const saved = localStorage.getItem('bigNewsBookmarks');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('bigNewsBookmarks');
+      return saved ? JSON.parse(saved) : [];
+    } catch(e) { return []; }
   });
 
   const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem('bigNewsUserProfile');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('bigNewsUserProfile');
+      return saved ? JSON.parse(saved) : null;
+    } catch(e) { return null; }
   });
 
   const [videos, setVideos] = useState<Video[]>(() => {
-    const saved = localStorage.getItem('bigNewsVideos');
-    return saved ? JSON.parse(saved) : MOCK_VIDEOS;
+    try {
+      const saved = localStorage.getItem('bigNewsVideos');
+      return saved ? JSON.parse(saved) : MOCK_VIDEOS;
+    } catch(e) { return MOCK_VIDEOS; }
   });
 
   const [selectedCategory, setSelectedCategory] = useState<Category>('For You');
@@ -83,26 +91,34 @@ const App: React.FC = () => {
   const ITEMS_PER_PAGE = 8;
 
   const [preferences, setPreferences] = useState<UserPreferences>(() => {
-    const saved = localStorage.getItem('bigNewsPreferences');
-    return saved ? JSON.parse(saved) : { theme: 'light', fontSize: 'medium' };
+    try {
+      const saved = localStorage.getItem('bigNewsPreferences');
+      return saved ? JSON.parse(saved) : { theme: 'light', fontSize: 'medium' };
+    } catch(e) { return { theme: 'light', fontSize: 'medium' }; }
   });
 
   const [wallet, setWallet] = useState<WalletState>(() => {
-    const saved = localStorage.getItem('bigNewsWallet');
-    if (saved) return JSON.parse(saved);
-    const initialViews = MOCK_ARTICLES.reduce((sum, a) => sum + (a.views || 0), 0);
-    const initialBalance = (initialViews / 1000) * 2.50; 
-    return { balance: initialBalance, lifetimeEarnings: initialBalance, history: [] };
+    try {
+      const saved = localStorage.getItem('bigNewsWallet');
+      if (saved) return JSON.parse(saved);
+      const initialViews = MOCK_ARTICLES.reduce((sum, a) => sum + (a.views || 0), 0);
+      const initialBalance = (initialViews / 1000) * 2.50; 
+      return { balance: initialBalance, lifetimeEarnings: initialBalance, history: [] };
+    } catch(e) { return { balance: 0, lifetimeEarnings: 0, history: [] }; }
   });
 
   const [automation, setAutomation] = useState<AutomationConfig>(() => {
-    const saved = localStorage.getItem('bigNewsAutomationConfig');
-    return saved ? JSON.parse(saved) : { enabled: false, intervalMinutes: 10, autoCategories: ['Technology', 'Business', 'Science', 'Politics', 'Education'], isCurrentlyRunning: false };
+    try {
+      const saved = localStorage.getItem('bigNewsAutomationConfig');
+      return saved ? JSON.parse(saved) : { enabled: false, intervalMinutes: 10, autoCategories: ['Technology', 'Business', 'Science', 'Politics', 'Education'], isCurrentlyRunning: false };
+    } catch(e) { return { enabled: false, intervalMinutes: 10, autoCategories: [], isCurrentlyRunning: false }; }
   });
 
   const [automationLogs, setAutomationLogs] = useState<AutomationLog[]>(() => {
-    const saved = localStorage.getItem('bigNewsAutomationLogs');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('bigNewsAutomationLogs');
+      return saved ? JSON.parse(saved) : [];
+    } catch(e) { return []; }
   });
 
   const [monetization, setMonetization] = useState<MonetizationConfig>({ adsenseId: '', monetagId: '', adsenseEnabled: false, monetagEnabled: false });
@@ -160,7 +176,7 @@ const App: React.FC = () => {
     
     if (selectedCategory === 'Bookmarks') return bookmarks.includes(a.id) && matchesSearch;
     if (selectedCategory === 'For You') return matchesSearch;
-    if (selectedCategory === 'Trending') return matchesSearch; // All articles for trending pool
+    if (selectedCategory === 'Trending') return matchesSearch; 
     if (selectedCategory === 'Videos') return false;
     
     return a.category === selectedCategory && matchesSearch;
@@ -184,11 +200,10 @@ const App: React.FC = () => {
     setIsLegalModalOpen(true);
   };
 
-  // Mock User Stats for Dashboard
   const userStats = {
-    articlesRead: 42, // Simulated
+    articlesRead: 42,
     bookmarks: bookmarks.length,
-    comments: 12 // Simulated
+    comments: 12
   };
 
   return (
@@ -203,7 +218,6 @@ const App: React.FC = () => {
         isAuthenticated={isAuthenticated}
       />
 
-      {/* Floating Chatter Launch Button */}
       <button 
         onClick={() => setIsChatterOpen(true)}
         className="fixed bottom-24 right-6 z-[190] w-14 h-14 bg-blue-600 text-white rounded-[1.25rem] shadow-[0_20px_40px_-8px_rgba(37,99,235,0.4)] hover:scale-110 active:scale-90 transition-all flex items-center justify-center group"
@@ -215,7 +229,7 @@ const App: React.FC = () => {
       <BreakingNewsBanner articles={articles} onArticleClick={setSelectedArticle} />
       
       <header className={`sticky top-0 z-40 border-b transition-all ${isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200'} backdrop-blur-md`}>
-        <div className="max-w-[1600px] mx-auto px-4 h-16 sm:h-20 flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto px-4 h-16 h-20 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -240,28 +254,27 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Chatter AI Button in TOP RIGHT CORNER - High Visibility */}
             <button 
               onClick={() => setIsChatterOpen(true)}
-              className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full font-black text-xs uppercase tracking-wider transition-all border group relative overflow-hidden shadow-sm hover:shadow-md ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all border group relative overflow-hidden shadow-lg animate-in fade-in slide-in-from-right-2 ${
                 isDark 
-                  ? 'border-blue-500/40 text-blue-400 bg-blue-900/20 hover:bg-blue-900/40' 
-                  : 'border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100'
+                  ? 'border-blue-500/60 text-blue-400 bg-blue-900/30 hover:bg-blue-900/50 shadow-blue-500/10' 
+                  : 'border-blue-200 text-blue-700 bg-white hover:bg-blue-50 shadow-blue-600/5'
               }`}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-              <BrainCircuit size={16} className="group-hover:scale-110 transition-transform text-blue-500" />
-              <span>Chatter AI</span>
-              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
+              <BrainCircuit size={16} className="group-hover:scale-110 transition-transform" />
+              <span>CHATTER AI</span>
+              <Sparkles size={12} className="text-amber-400 group-hover:rotate-12 transition-transform" />
             </button>
 
-            {/* Support Button */}
             <button 
               onClick={() => setIsDonationModalOpen(true)}
-              className={`flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-lg hover:shadow-rose-500/20 active:scale-95 group ${isDark ? 'bg-rose-600 text-white hover:bg-rose-500' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
+              className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-lg hover:shadow-rose-500/20 active:scale-95 group ${isDark ? 'bg-rose-600 text-white hover:bg-rose-500' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
             >
               <Heart size={16} className="fill-current group-hover:animate-pulse" />
-              <span className="hidden md:inline">Support</span>
+              <span>Support</span>
             </button>
 
             <button 
@@ -278,7 +291,7 @@ const App: React.FC = () => {
                   className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${showAdminDashboard ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
                 >
                   <LayoutDashboard size={18} />
-                  {showAdminDashboard ? 'News Feed' : 'Dashboard'}
+                  {showAdminDashboard ? 'Feed' : 'Admin'}
                 </button>
                 <button 
                   onClick={() => setIsAuthenticated(false)}
@@ -291,10 +304,10 @@ const App: React.FC = () => {
             ) : (
               <button 
                 onClick={() => setIsLoginModalOpen(true)}
-                className="flex items-center gap-2 text-sm font-bold p-2 hover:text-blue-600 transition-colors"
+                className="hidden sm:flex items-center gap-2 text-sm font-bold p-2 hover:text-blue-600 transition-colors"
               >
                 <Lock size={18} />
-                <span className="hidden sm:inline">Admin</span>
+                <span>Admin</span>
               </button>
             )}
 
@@ -321,7 +334,6 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Categories Bar */}
         <nav className={`border-t overflow-x-auto no-scrollbar ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
           <div className="max-w-[1600px] mx-auto px-4 flex items-center gap-1">
             {CATEGORIES.map(category => (
@@ -476,7 +488,6 @@ const App: React.FC = () => {
          </div>
       </footer>
 
-      {/* Modals */}
       <ArticleModal 
         article={selectedArticle} 
         onClose={() => setSelectedArticle(null)} 
@@ -536,7 +547,6 @@ const App: React.FC = () => {
         userName={userProfile?.name}
       />
 
-      {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl animate-in fade-in duration-300 flex flex-col p-8">
            <div className="flex justify-between items-center mb-12">
@@ -555,6 +565,20 @@ const App: React.FC = () => {
               ))}
            </div>
            <div className="mt-auto flex flex-col gap-4">
+              <button 
+                onClick={() => { 
+                  if (isAuthenticated) {
+                    setShowAdminDashboard(!showAdminDashboard);
+                  } else {
+                    setIsLoginModalOpen(true);
+                  }
+                  setIsMobileMenuOpen(false);
+                }} 
+                className="w-full py-4 bg-blue-600 text-white rounded-xl font-black text-xl shadow-lg flex items-center justify-center gap-3"
+              >
+                {isAuthenticated ? <LayoutDashboard size={24} /> : <Lock size={24} />}
+                {isAuthenticated ? (showAdminDashboard ? 'Public Feed' : 'Admin Portal') : 'Admin Portal'}
+              </button>
               <button onClick={() => { setIsDonationModalOpen(true); setIsMobileMenuOpen(false); }} className="w-full py-4 bg-rose-500 text-white rounded-xl font-black text-xl shadow-lg">Support Big News</button>
               <button onClick={() => { setIsSettingsModalOpen(true); setIsMobileMenuOpen(false); }} className="w-full py-4 bg-slate-800 text-white rounded-xl font-black text-xl">Settings</button>
            </div>

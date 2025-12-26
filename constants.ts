@@ -1,5 +1,5 @@
 
-import { Article, Category, Video } from './types';
+import { Article, Category, Video } from './types.ts';
 
 export const CATEGORIES: Category[] = [
   'For You',
@@ -7,6 +7,7 @@ export const CATEGORIES: Category[] = [
   'Technology',
   'Politics',
   'Health',
+  'Football',
   'Lifestyle',
   'Sports',
   'Food',
@@ -48,87 +49,101 @@ export const MOCK_VIDEOS: Video[] = [
 
 export const MOCK_ARTICLES: Article[] = [
   {
-    id: 'founder-story',
-    title: 'Meet the Visionary Developer Behind Big News',
-    subject: 'INNOVATION & LEADERSHIP',
-    summary: 'The founder of Big News and CEO of Mova AI is redefining how the world consumes information.',
+    id: 'health-1',
+    title: 'The Future of Longevity: 5 Daily Habits for a 100-Year Life',
+    subject: 'PREVENTATIVE MEDICINE',
+    summary: 'New research suggests that micro-habits in our 30s and 40s significantly determine cognitive health in our later decades.',
     content: `
-      <p><strong>Exclusive Interview</strong> — In a world saturated with information, one developer dared to reimagine how we consume news. Meet the founder of Big News, a visionary tech leader who turned a simple idea into a global platform.</p>
-      <p>"Our goal was never just to aggregate headlines," says the founder, pictured in his high-rise office overlooking the city skyline. "It was to create an ecosystem where technology helps users cut through the noise to find the stories that truly matter."</p>
-      <p>With a background in advanced machine learning and a passion for journalism, he built Big News from the ground up. The platform now serves millions of users, offering personalized feeds and real-time updates powered by cutting-edge algorithms.</p>
-      <p>Also serving as the CEO of <strong>Mova AI</strong>, his dual expertise in artificial intelligence and media technology places Big News at the forefront of the industry's evolution. "We are just getting started," he adds, hinting at new features coming later this year.</p>
+      <p>Scientists at the Global Health Institute have released a comprehensive study tracking over 50,000 individuals over three decades. Their findings suggest that longevity is less about genetics and more about "metabolic consistency."</p>
+      <p>The study highlights five key areas: high-intensity interval movement, consistent circadian sleep cycles, fermented food intake, cognitive cross-training, and deep social connectivity. "We're seeing that even ten minutes of purposeful movement can flip biological switches that suppress inflammation," says Dr. Aris Thorne.</p>
     `,
-    category: 'Technology',
-    author: 'Big News Staff',
-    imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=1600&h=900&q=80',
+    category: 'Health',
+    author: 'Dr. Sarah Chen',
+    imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1600&h=900&q=80',
     publishedAt: new Date().toISOString(),
-    tags: ['Founder', 'Technology', 'Innovation', 'Leadership', 'Mova AI'],
-    views: 250000,
-    likes: 15400,
-    comments: 230,
-    userComments: [],
-    isBreaking: true,
-  },
-  {
-    id: 'edu-future',
-    title: 'The Rise of AI Tutors in Global Classrooms',
-    subject: 'EDUCATION REVOLUTION',
-    summary: 'Personalized learning reaches new heights as adaptive AI systems enter primary schools.',
-    content: `
-      <p>From London to Nairobi, the classroom experience is undergoing a digital metamorphosis. A new generation of AI-driven tutoring systems is providing personalized feedback to students in real-time, bridging the gap between classroom teaching and individual needs.</p>
-      <p>Critics warn of the "digital divide," but proponents argue that low-cost AI models could bring high-quality education to remote areas where teachers are scarce.</p>
-    `,
-    category: 'Education',
-    author: 'Elena Vance',
-    imageUrl: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1600&h=900&q=80',
-    publishedAt: new Date().toISOString(),
-    tags: ['Education', 'AI', 'Learning', 'EdTech'],
-    views: 45000,
-    likes: 3200,
-    comments: 85,
-    userComments: [],
-  },
-  {
-    id: 'police-peace-news',
-    title: 'New Directive Focuses on Community Peace',
-    subject: 'Police officers are required to create peace and support to the people',
-    summary: 'A new administrative order outlines a paradigm shift in community policing and public support systems.',
-    content: `
-      <p>Authorities have announced a comprehensive new framework for law enforcement aimed at fostering deeper trust and cooperation with local communities. The directive, titled "Peace and Support Initiative," emphasizes that the primary role of law enforcement is the protection and service of the citizenry through non-adversarial engagement.</p>
-      <p>"The objective is clear," said the Commissioner during a press conference. "Police officers are required to create peace and support to the people at every interaction. We are shifting from a purely reactive model to a proactive, service-oriented approach."</p>
-      <p>The program includes extensive training in conflict de-escalation, mental health crisis response, and community resource networking.</p>
-    `,
-    category: 'Politics',
-    author: 'Daniel Craig',
-    imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=1600&h=900&q=80',
-    publishedAt: new Date().toISOString(),
-    tags: ['Safety', 'Public Policy', 'Community', 'Peace'],
-    views: 12400,
-    likes: 540,
+    tags: ['Longevity', 'Wellness', 'Science'],
+    views: 12500,
+    likes: 840,
     comments: 12,
     userComments: [],
     isBreaking: true,
   },
   {
-    id: '1',
-    title: 'The Future of Quantum Computing',
-    subject: 'SCIENTIFIC BREAKTHROUGH',
-    summary: 'Scientists make a breakthrough in stable qubits, paving the way for faster processing.',
+    id: 'health-2',
+    title: 'Mental Health in the Digital Age: The "Deep Focus" Method',
+    subject: 'NEUROLOGICAL WELLNESS',
+    summary: 'As digital distractions reach an all-time high, psychologists are prescribing "analog hours" to combat rising anxiety levels.',
     content: `
-      <p>In a groundbreaking development, researchers have successfully demonstrated a new method for stabilizing qubits at room temperature. This achievement could significantly accelerate the timeline for commercially viable quantum computers.</p>
-      <p>"This is the holy grail we've been searching for," said Dr. Elena Rostova, lead physicist on the project. The team used a novel diamond lattice structure to shield the qubits from environmental noise.</p>
-      <p>Tech giants are already racing to license the technology, with experts predicting prototype consumer devices within the decade.</p>
+      <p>In a world of constant notifications, our brains are losing the ability to enter "Flow State." New clinical trials show that spending just 60 minutes a day in a purely analog environment—no screens, no digital audio—can reduce cortisol levels by up to 30%.</p>
+      <p>The "Deep Focus" method involves physical books, handwritten notes, and silent observation. Psychologists argue this isn't just about productivity; it's a vital health requirement for the modern nervous system.</p>
+    `,
+    category: 'Health',
+    author: 'Julian Vance',
+    imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=1600&h=900&q=80',
+    publishedAt: new Date().toISOString(),
+    tags: ['Mental Health', 'Focus', 'Brain'],
+    views: 9200,
+    likes: 420,
+    comments: 8,
+    userComments: [],
+  },
+  {
+    id: 'football-1',
+    title: 'Champions League Drama: Underdogs Secure Historic Quarter-Final Spot',
+    subject: 'EUROPEAN FOOTBALL',
+    summary: 'In a match that will be remembered for decades, the league minnows overcame a 3-goal deficit to shock the giants.',
+    content: `
+      <p>Pure football magic was witnessed last night at the Allianz Arena. Against all odds, the visiting underdogs overturned a massive deficit with a hat-trick in the final fifteen minutes of play.</p>
+      <p>The manager's tactical switch to a high-pressing 3-4-3 system confused the veteran defenders of the home side. "We believed when nobody else did," the captain remarked during the emotional post-match interview. The streets of the home city are currently flooded with celebrating fans.</p>
+    `,
+    category: 'Football',
+    author: 'Marco Rossi',
+    imageUrl: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1600&h=900&q=80',
+    publishedAt: new Date().toISOString(),
+    tags: ['Champions League', 'Football', 'Shock'],
+    views: 45000,
+    likes: 3200,
+    comments: 156,
+    userComments: [],
+    isBreaking: true,
+  },
+  {
+    id: 'football-2',
+    title: 'Transfer Window Update: The $200M Secret Clause revealed',
+    subject: 'MARKET UPDATES',
+    summary: 'A leaked document suggests the star striker has a unique performance-based exit clause active this summer.',
+    content: `
+      <p>The football transfer market is bracing for a seismic shift. Documents obtained by Big News reveal a complex $200M release clause in the contract of the world's most sought-after forward. The clause, previously thought to be dormant, is actually active based on goal-to-game ratios.</p>
+      <p>Three major clubs—Real Madrid, Manchester City, and PSG—are reportedly preparing formal bids that meet the valuation. The player's agent declined to comment, but sources close to the deal suggest a move is "imminent."</p>
+    `,
+    category: 'Football',
+    author: 'Elena Moretti',
+    imageUrl: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1600&h=900&q=80',
+    publishedAt: new Date().toISOString(),
+    tags: ['Transfers', 'Football News', 'Big Deals'],
+    views: 67000,
+    likes: 5600,
+    comments: 245,
+    userComments: [],
+  },
+  {
+    id: 'tech-1',
+    title: 'Quantum Advantage Achieved by Mova AI Labs',
+    subject: 'AI BREAKTHROUGH',
+    summary: 'The new neural processor can perform calculations in seconds that take traditional supercomputers years.',
+    content: `
+      <p>Mova AI Labs has announced a historic breakthrough in quantum computing architecture. Their new "Neuron-Q" chip successfully simulated a complex protein folding sequence with 99.9% accuracy, marking a major milestone in AI development.</p>
+      <p>This technology is expected to power the next generation of Big News algorithms, allowing for even more precise content personalization and real-time verification of global events.</p>
     `,
     category: 'Technology',
     author: 'Sarah Jenkins',
     imageUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1600&h=900&q=80',
     publishedAt: new Date(Date.now() - 86400000).toISOString(),
-    tags: ['Quantum Physics', 'Innovation', 'Future Tech'],
+    tags: ['AI', 'Quantum', 'Mova AI'],
     views: 12500,
     likes: 840,
     comments: 2,
     userComments: [],
     isBreaking: false,
-    linkedVideoId: 'v1'
   }
 ];
