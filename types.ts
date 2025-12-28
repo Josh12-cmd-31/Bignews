@@ -72,22 +72,6 @@ export interface MonetizationConfig {
   monetagEnabled: boolean;
 }
 
-export interface AutomationConfig {
-  enabled: boolean;
-  intervalMinutes: number;
-  lastRunAt?: string;
-  autoCategories: Category[];
-  isCurrentlyRunning?: boolean;
-}
-
-export interface AutomationLog {
-  id: string;
-  timestamp: string;
-  status: 'success' | 'error';
-  articleTitle?: string;
-  message: string;
-}
-
 export interface Transaction {
   id: string;
   amount: number;
@@ -101,4 +85,26 @@ export interface WalletState {
   balance: number;
   lifetimeEarnings: number;
   history: Transaction[];
+}
+
+/**
+ * Configuration for the background AI journalist automation
+ */
+export interface AutomationConfig {
+  enabled: boolean;
+  intervalMinutes: number;
+  lastRunAt?: string;
+  isCurrentlyRunning: boolean;
+  autoCategories: Category[];
+}
+
+/**
+ * Log entry for automation tasks
+ */
+export interface AutomationLog {
+  id: string;
+  timestamp: string;
+  status: 'success' | 'error';
+  articleTitle?: string;
+  message: string;
 }
