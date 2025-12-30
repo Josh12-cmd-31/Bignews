@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Article, WalletState } from '../types';
-import { BarChart3, TrendingUp, Users, Heart, MessageSquare, Globe, Smartphone, Monitor, Tablet, Clock, MousePointerClick, Activity, Wallet, DollarSign, ArrowUpRight, CreditCard, Lock, History, ChevronRight } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Heart, MessageSquare, Globe, Smartphone, Monitor, Tablet, Clock, MousePointerClick, Activity, Wallet, DollarSign, ArrowUpRight, CreditCard, Lock, History, ChevronRight, Gem } from 'lucide-react';
 import WithdrawalModal from './WithdrawalModal';
 
 interface AnalyticsDashboardProps {
@@ -21,6 +20,10 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ articles, walle
   const CPM = 2.50;
   const todayEarnings = (todayViews / 1000) * CPM;
   
+  // Net Worth Calculation: Lifetime Earnings + Brand Valuation ($0.05 per view)
+  const brandValuation = totalViews * 0.05;
+  const netWorth = wallet.lifetimeEarnings + brandValuation;
+  
   const estimatedVisitors = Math.round(totalViews / 2.5); 
   
   const topArticles = [...articles].sort((a, b) => {
@@ -37,16 +40,13 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ articles, walle
     viewsByCategory[article.category] += article.views || 0;
   });
 
-  const maxCategoryViews = Math.max(...Object.values(viewsByCategory), 1);
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       
       {/* Real Wallet Section */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8 rounded-2xl shadow-xl border border-slate-700 relative overflow-hidden">
          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-500 rounded-full blur-[100px] opacity-20"></div>
-         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-purple-500 rounded-full blur-[100px] opacity-20"></div>
+         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-emerald-500 rounded-full blur-[100px] opacity-20"></div>
 
          <div className="relative z-10">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
@@ -55,7 +55,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ articles, walle
                      <Wallet className="text-emerald-400" />
                      Publisher Wallet
                   </h2>
-                  <p className="text-slate-400 text-sm mt-1">Managed revenue from content performance.</p>
+                  <p className="text-slate-400 text-sm mt-1">Managed revenue and brand valuation from content performance.</p>
                </div>
                <button 
                 onClick={() => setIsWithdrawModalOpen(true)}
@@ -66,25 +66,38 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ articles, walle
                </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-               <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10">
-                  <div className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Active Balance</div>
-                  <div className="text-4xl font-black tracking-tight text-emerald-400">${wallet.balance.toFixed(2)}</div>
-                  <div className="mt-2 text-[10px] text-slate-400">Minimum withdrawal: $10.00</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+               <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10 group hover:border-emerald-500/30 transition-all">
+                  <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Active Balance</div>
+                  <div className="text-3xl font-black tracking-tight text-emerald-400">${wallet.balance.toFixed(2)}</div>
+                  <div className="mt-2 text-[10px] text-slate-400">Min. payout: $10.00</div>
                </div>
 
-               <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10">
-                  <div className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Estimated Today</div>
+               <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10 group hover:border-blue-500/30 transition-all">
+                  <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Estimated Today</div>
                   <div className="text-3xl font-black tracking-tight">${todayEarnings.toFixed(2)}</div>
                   <div className="mt-2 flex items-center gap-1 text-[10px] text-green-400 font-bold">
-                    <TrendingUp size={10} /> +12% from yesterday
+                    <TrendingUp size={10} /> +12% performance
                   </div>
                </div>
 
-               <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10">
-                  <div className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Lifetime Earnings</div>
-                  <div className="text-3xl font-black tracking-tight">${wallet.lifetimeEarnings.toFixed(2)}</div>
-                  <div className="mt-2 text-[10px] text-slate-400">Total revenue generated</div>
+               <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10 group hover:border-slate-500/30 transition-all">
+                  <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Lifetime Earnings</div>
+                  <div className="text-3xl font-black tracking-tight text-slate-200">${wallet.lifetimeEarnings.toFixed(2)}</div>
+                  <div className="mt-2 text-[10px] text-slate-400">Cumulative revenue</div>
+               </div>
+
+               {/* New Net Worth Card */}
+               <div className="bg-gradient-to-br from-blue-600/10 to-indigo-600/10 backdrop-blur-md rounded-xl p-5 border border-blue-500/20 group hover:border-blue-400/50 transition-all relative overflow-hidden">
+                  <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <Gem size={80} />
+                  </div>
+                  <div className="text-blue-400 text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
+                    <Gem size={12} />
+                    Net Worth
+                  </div>
+                  <div className="text-3xl font-black tracking-tight text-white">${netWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="mt-2 text-[10px] text-blue-400/80 font-bold">Market Cap Valuation</div>
                </div>
             </div>
          </div>
