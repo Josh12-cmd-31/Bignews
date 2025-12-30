@@ -17,7 +17,7 @@ import VideoFeed from './components/VideoFeed.tsx';
 import LegalModal from './components/LegalModal.tsx';
 import Chatter from './components/Chatter.tsx';
 import Logo from './components/Logo.tsx';
-import { Menu, Search, LogOut, Lock, Settings, Heart, User as UserIcon, Activity, X, ChevronRight, ChevronLeft, LayoutDashboard, PenLine, DollarSign, Film, Flame, Sparkles, BrainCircuit, Globe, Shield } from 'lucide-react';
+import { Menu, Search, LogOut, Lock, Settings, Heart, User as UserIcon, Activity, X, ChevronRight, ChevronLeft, LayoutDashboard, PenLine, DollarSign, Film, Flame, Sparkles, BrainCircuit, Globe, Shield, ShieldCheck } from 'lucide-react';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -390,25 +390,28 @@ const App: React.FC = () => {
                </div>
             </div>
 
+            {/* Legal Links */}
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
                <button onClick={() => setIsFeedbackModalOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">Feedback</button>
                <button onClick={() => openLegal('privacy')} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">Privacy</button>
                <button onClick={() => openLegal('terms')} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">Terms</button>
             </div>
             
-            <div className="flex flex-col items-center gap-4">
+            {/* Admin and Copyright - Admin is only visible once authenticated */}
+            <div className="flex flex-col items-center gap-6">
                {isAuthenticated && (
                  <button 
-                   onClick={() => setShowAdminDashboard(true)}
-                   className="px-6 py-2 bg-blue-600/10 text-blue-600 border border-blue-600/20 rounded-full text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-bottom-2 flex items-center gap-2"
+                   onClick={() => { setShowAdminDashboard(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                   className="px-8 py-3 bg-blue-600/10 text-blue-600 border border-blue-600/20 rounded-2xl text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-bottom-4 flex items-center gap-2 hover:bg-blue-600 hover:text-white transition-all shadow-lg hover:shadow-blue-500/20 active:scale-95"
                  >
-                   <Shield size={12} />
-                   Go to Admin Dashboard
+                   <ShieldCheck size={16} />
+                   mova group
                  </button>
                )}
+               
                <p 
                 onClick={handleSecretTrigger}
-                className="text-[10px] text-slate-400 font-bold uppercase tracking-widest cursor-pointer select-none active:scale-95 transition-transform"
+                className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] cursor-pointer select-none active:scale-95 transition-transform hover:text-slate-600"
                >
                  © {new Date().getFullYear()} Big News Inc.
                </p>
@@ -429,7 +432,7 @@ const App: React.FC = () => {
       <LoginModal 
         isOpen={isLoginModalOpen} 
         onClose={() => setIsLoginModalOpen(false)} 
-        onLogin={() => { setIsAuthenticated(true); setShowAdminDashboard(true); }} 
+        onLogin={() => { setIsAuthenticated(true); setShowAdminDashboard(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
       />
 
       <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} />
@@ -457,7 +460,7 @@ const App: React.FC = () => {
               {CATEGORIES.map(cat => (
                 <button 
                   key={cat} 
-                  onClick={() => { setSelectedCategory(cat); setIsMobileMenuOpen(false); setShowAdminDashboard(false); }}
+                  onClick={() => { setSelectedCategory(cat); setIsMobileMenuOpen(false); setShowAdminDashboard(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   className={`text-2xl font-black font-serif text-left transition-colors ${selectedCategory === cat ? 'text-blue-400' : 'text-slate-400'}`}
                 >
                   {cat}
