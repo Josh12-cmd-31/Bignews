@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Modality, LiveServerMessage } from '@google/genai';
+import { Article } from '../types';
 import { 
   X, Mic, MicOff, Send, Sparkles, Image as ImageIcon, MessageSquare, 
   Phone, PhoneOff, Bot, Loader2, Play, Volume2, User, History, 
@@ -13,6 +13,7 @@ interface ChatterProps {
   onClose: () => void;
   isDark: boolean;
   userName?: string;
+  articles?: Article[];
 }
 
 interface ChatMessage {
@@ -233,7 +234,7 @@ function createBlob(data: Float32Array): { data: string; mimeType: string } {
 
 // --- Main Chatter Component ---
 
-const Chatter: React.FC<ChatterProps> = ({ isOpen, onClose, isDark, userName: appUserName }) => {
+const Chatter: React.FC<ChatterProps> = ({ isOpen, onClose, isDark, userName: appUserName, articles = [] }) => {
   const [currentUser, setCurrentUser] = useState<any>(() => {
     const saved = localStorage.getItem('chatter_current_user');
     return saved ? JSON.parse(saved) : null;
@@ -310,6 +311,11 @@ const Chatter: React.FC<ChatterProps> = ({ isOpen, onClose, isDark, userName: ap
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const isImageRequest = /\b(image|draw|generate image|picture|illustration|create image|photo|art|sketch)\b/i.test(prompt);
 
+      // Create a context string from the articles
+      const articleContext = articles.length > 0 
+        ? "Latest News Articles on the platform:\n" + articles.slice(0, 5).map(a => `- ${a.title} by ${a.author} (${a.category})`).join('\n')
+        : "No specific news articles available right now.";
+
       if (isImageRequest) {
         setReasoning("Visualizing the creative elements and drafting the composition...");
         const response = await ai.models.generateContent({
@@ -344,7 +350,11 @@ const Chatter: React.FC<ChatterProps> = ({ isOpen, onClose, isDark, userName: ap
             thinkingConfig: { thinkingBudget: 0 },
             systemInstruction: `You are Chatter, an advanced, empathetic AI companion for the Big News platform. 
             User: ${currentUser?.name || appUserName}. 
-            Be professional, warm, and highly capable in writing and news analysis.`
+            
+            Context of Current News Articles:
+            ${articleContext}
+            
+            Your job is to be professional, warm, and helpful. If the user asks about the news, use the context provided to answer accurately. If they want a summary, summarize the top story for them.`
           }
         });
 
@@ -378,7 +388,7 @@ const Chatter: React.FC<ChatterProps> = ({ isOpen, onClose, isDark, userName: ap
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = stream;
       sessionPromiseRef.current = ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         callbacks: {
           onopen: () => {
             const source = inputAudioContextRef.current!.createMediaStreamSource(stream);
@@ -418,7 +428,7 @@ const Chatter: React.FC<ChatterProps> = ({ isOpen, onClose, isDark, userName: ap
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } },
-          systemInstruction: `You are in a live phone call with ${currentUser?.name || appUserName}. Act like a real human friend.`
+          systemInstruction: `You are in a live phone call with ${currentUser?.name || appUserName}. Act like a real human friend. You have access to news articles if asked.`
         }
       });
     } catch (err) {
@@ -522,14 +532,15 @@ const Chatter: React.FC<ChatterProps> = ({ isOpen, onClose, isDark, userName: ap
                       <Sparkles size={64} className="text-blue-500 mb-4 mx-auto animate-pulse" />
                       <h3 className="text-2xl font-black font-serif">Hello, {currentUser.name}</h3>
                       <p className="max-w-xs text-sm mt-3 text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                        Your private AI session is active. I can generate professional news reports, illustrations, or just talk.
+                        Your private AI session is active. I can generate professional news reports, illustrations, or just talk about today's news.
                       </p>
                    </div>
                    <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
                       {[
-                        "Write a report on Big News tech stack",
+                        "What's the top story today?",
+                        "Summarize the latest Technology news",
                         "Draw an illustration of a global journalist",
-                        "Explain quantum computing in 2 sentences"
+                        "Write a report on Big News tech stack"
                       ].map(suggestion => (
                         <button key={suggestion} onClick={() => setInputText(suggestion)} className={`p-4 rounded-2xl text-xs font-black text-left uppercase tracking-widest transition-all border ${isDark ? 'border-white/5 hover:bg-blue-600/10 hover:border-blue-500/30' : 'border-slate-100 hover:bg-blue-50 hover:border-blue-200'}`}>
                           {suggestion}
@@ -558,7 +569,7 @@ const Chatter: React.FC<ChatterProps> = ({ isOpen, onClose, isDark, userName: ap
                     <BrainCircuit size={28} className="text-blue-500 animate-pulse" />
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">Neural Processing...</span>
-                      <p className="text-xs font-black italic text-slate-500 dark:text-slate-400">{reasoning || "Analyzing neural pathways..."}</p>
+                      <p className="text-xs font-black italic text-slate-500 dark:text-slate-400">{reasoning || "Analyzing news articles..."}</p>
                     </div>
                   </div>
                 </div>
@@ -571,7 +582,7 @@ const Chatter: React.FC<ChatterProps> = ({ isOpen, onClose, isDark, userName: ap
               <form onSubmit={handleSendMessage} className="flex gap-4">
                  <div className="flex-1 relative">
                     <input 
-                      type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Ask me to write or draw anything..." disabled={isGenerating}
+                      type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Ask me about the news or to draw anything..." disabled={isGenerating}
                       className={`w-full pl-6 pr-14 py-5 rounded-2xl outline-none border-2 transition-all font-black text-sm shadow-inner ${isDark ? 'bg-white/5 border-white/5 text-white focus:border-blue-500/50' : 'bg-slate-100 border-transparent text-slate-900 focus:bg-white focus:border-blue-500/20'}`}
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -585,7 +596,7 @@ const Chatter: React.FC<ChatterProps> = ({ isOpen, onClose, isDark, userName: ap
               <div className="mt-6 flex justify-center items-center gap-8 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
                  <div className="flex items-center gap-2"><Sparkles size={12} className="text-blue-500" /> Multi-modal</div>
                  <div className="w-1.5 h-1.5 bg-slate-800 rounded-full"></div>
-                 <div className="flex items-center gap-2"><Volume2 size={12} className="text-emerald-500" /> Real-time Audio</div>
+                 <div className="flex items-center gap-2"><Volume2 size={12} className="text-emerald-500" /> News Narrator</div>
                  <div className="w-1.5 h-1.5 bg-slate-800 rounded-full"></div>
                  <div className="flex items-center gap-2"><BrainCircuit size={12} className="text-rose-500" /> Secured</div>
               </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Article, Category, Video } from '../types';
 import { CATEGORIES } from '../constants';
@@ -153,14 +152,13 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
       const generated = await generateArticleContent(inputValue, inputMode);
       setFormData(prev => ({
         ...prev,
-        title: generated.title,
+        title: generated.title || '',
         subject: generated.subject || '',
-        content: generated.content,
-        summary: generated.summary,
+        content: generated.content || '',
+        summary: generated.summary || '',
         category: (CATEGORIES.includes(generated.category as Category) ? generated.category : 'Technology') as Category,
         tags: generated.tags ? generated.tags.join(', ') : '',
         sourceUrl: inputMode === 'url' ? inputValue : prev.sourceUrl,
-        // Ensure generated image uses a STABLE seed so it never changes
         imageUrl: `https://picsum.photos/seed/${Date.now()}/1600/900`
       }));
       setShowAiPanel(false);
@@ -179,8 +177,8 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
     }
 
     const newArticle: Article = {
-      id: Date.now().toString(),
       ...formData,
+      id: Date.now().toString(),
       publishedAt: new Date().toISOString(),
       isAiGenerated: !!inputValue,
       tags: formData.tags.split(',').map(t => t.trim()).filter(t => t.length > 0),
@@ -189,6 +187,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
       comments: 0,
       userComments: []
     };
+    
     onPublish(newArticle);
     
     if (currentDraftId) {
@@ -391,7 +390,7 @@ const AdminEditor: React.FC<AdminEditorProps> = ({ onPublish, videos }) => {
                    />
                    {formData.imageUrl.startsWith('data:') && (
                      <button 
-                       onClick={() => setFormData({...prev => ({...prev, imageUrl: ''})})}
+                       onClick={() => setFormData(prev => ({...prev, imageUrl: ''}))}
                        className="text-[10px] text-red-500 font-bold hover:underline flex items-center gap-1"
                      >
                        <X size={10} /> Remove Uploaded Image

@@ -138,8 +138,11 @@ const App: React.FC = () => {
   };
 
   const filteredArticles = articles.filter(a => {
-    const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         (a.summary && a.summary.toLowerCase().includes(searchQuery.toLowerCase()));
+    const title = a.title || '';
+    const summary = a.summary || '';
+    const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         summary.toLowerCase().includes(searchQuery.toLowerCase());
+    
     if (selectedCategory === 'Bookmarks') return bookmarks.includes(a.id) && matchesSearch;
     if (selectedCategory === 'For You') return matchesSearch;
     if (selectedCategory === 'Trending') return matchesSearch; 
@@ -151,7 +154,9 @@ const App: React.FC = () => {
       const scoreB = (b.views || 0) + ((b.likes || 0) * 10) + ((b.comments || 0) * 20);
       return scoreB - scoreA;
     }
-    return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+    const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+    const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+    return dateB - dateA;
   });
 
   const totalPages = Math.ceil(filteredArticles.length / ITEMS_PER_PAGE);
@@ -216,7 +221,7 @@ const App: React.FC = () => {
                 </button>
               ))}
             </div>
-            {adminTab === 'publisher' && <AdminEditor onPublish={(a) => {setArticles([a, ...articles]); setShowAdminDashboard(false);}} videos={videos} />}
+            {adminTab === 'publisher' && <AdminEditor onPublish={(a) => {setArticles(prev => [a, ...prev]); setShowAdminDashboard(false);}} videos={videos} />}
             {adminTab === 'analytics' && <AnalyticsDashboard articles={articles} wallet={wallet} onWithdrawal={handleWithdrawal} />}
             {adminTab === 'monetization' && <MonetizationPanel config={monetization} onUpdate={setMonetization} />}
             {adminTab === 'videos' && <VideoManager videos={videos} onUpdateVideos={setVideos} />}
@@ -284,7 +289,7 @@ const App: React.FC = () => {
       <DonationModal isOpen={isDonationModalOpen} onClose={() => setIsDonationModalOpen(false)} onSuccess={() => setIsDonationModalOpen(false)} isDark={isDark} />
       <UserDashboard isOpen={isUserDashboardOpen} onClose={() => setIsUserDashboardOpen(false)} userProfile={userProfile} onUpdateProfile={setUserProfile} isDark={isDark} onOpenChatter={() => { setIsUserDashboardOpen(false); setIsChatterOpen(true); }} stats={{ articlesRead: 24, bookmarks: bookmarks.length, comments: 4 }} />
       <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} type={legalType} isDark={isDark} />
-      <Chatter isOpen={isChatterOpen} onClose={() => setIsChatterOpen(false)} isDark={isDark} userName={userProfile?.name} />
+      <Chatter isOpen={isChatterOpen} onClose={() => setIsChatterOpen(false)} isDark={isDark} userName={userProfile?.name} articles={articles} />
       {isMobileMenuOpen && (<div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl animate-in fade-in duration-300 flex flex-col p-8"><div className="flex justify-between items-center mb-12"><Logo isDark={true} /><button onClick={() => setIsMobileMenuOpen(false)} className="text-white"><X size={32} /></button></div><div className="flex flex-col gap-6 overflow-y-auto no-scrollbar">{CATEGORIES.map(cat => (<button key={cat} onClick={() => { setSelectedCategory(cat); setIsMobileMenuOpen(false); setShowAdminDashboard(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`text-2xl font-black font-serif text-left transition-colors ${selectedCategory === cat ? 'text-blue-400' : 'text-slate-400'}`}>{cat}</button>))}</div></div>)}
     </div>
   );

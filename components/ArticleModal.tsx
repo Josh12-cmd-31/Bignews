@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Article, UserPreferences, Comment, UserProfile } from '../types';
-import { X, Clock, User, Share2, Heart, MessageSquare, Send, Gift, ShieldCheck, Check, Bookmark, Reply, AtSign, Facebook, Twitter, MessageCircle } from 'lucide-react';
+import { GoogleGenAI, Modality } from "@google/genai";
+import { X, Clock, User, Share2, Heart, MessageSquare, Send, Gift, ShieldCheck, Check, Bookmark, Reply, AtSign, Facebook, Twitter, MessageCircle, Volume2, Square, Loader2 } from 'lucide-react';
 
 interface ArticleModalProps {
   article: Article | null;
@@ -22,6 +23,36 @@ const getAvatarColor = (name: string) => {
   const charCode = name.charCodeAt(0) || 0;
   return AVATAR_COLORS[charCode % AVATAR_COLORS.length];
 };
+
+// --- Audio Utility Helpers ---
+function decodeBase64(base64: string) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number,
+  numChannels: number,
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
 
 const CommentItem: React.FC<{ 
   c: Comment; 
@@ -114,6 +145,81 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
   const [guestName, setGuestName] = useState('Guest');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+  
+  // TTS State
+  const [isNarrating, setIsNarrating] = useState(false);
+  const [isTtsLoading, setIsTtsLoading] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
+
+  // Re-ordered to define these before useEffects
+  const stopNarration = () => {
+    if (sourceNodeRef.current) {
+      try { sourceNodeRef.current.stop(); } catch(e) {}
+      sourceNodeRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try { audioContextRef.current.close(); } catch(e) {}
+      audioContextRef.current = null;
+    }
+    setIsNarrating(false);
+    setIsTtsLoading(false);
+  };
+
+  const startNarration = async () => {
+    if (isNarrating) {
+      stopNarration();
+      return;
+    }
+
+    setIsTtsLoading(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const plainText = article?.content.replace(/<[^>]*>?/gm, '') || "";
+      const prompt = `Read the following news article professionally: "${article?.title}. By ${article?.author}. ${plainText}"`;
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' },
+            },
+          },
+        },
+      });
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (!base64Audio) throw new Error("No audio returned");
+
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      const audioBuffer = await decodeAudioData(
+        decodeBase64(base64Audio),
+        audioContextRef.current,
+        24000,
+        1
+      );
+
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContextRef.current.destination);
+      source.onended = () => {
+        setIsNarrating(false);
+        audioContextRef.current = null;
+      };
+
+      sourceNodeRef.current = source;
+      source.start();
+      setIsNarrating(true);
+    } catch (err) {
+      console.error("TTS Error:", err);
+      alert("AI Narration failed. Please try again later.");
+    } finally {
+      setIsTtsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const storedName = localStorage.getItem('bigNewsGuestName');
@@ -123,7 +229,12 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
   useEffect(() => {
     setIsLiked(false);
     setReplyingTo(null);
+    stopNarration();
   }, [article?.id]);
+
+  useEffect(() => {
+    return () => stopNarration();
+  }, []);
 
   if (!article) return null;
 
@@ -214,7 +325,21 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
 
         <div className="p-6 sm:p-10">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-            <span className="px-3 py-1 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">{article.category}</span>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">{article.category}</span>
+              <button 
+                onClick={startNarration} 
+                disabled={isTtsLoading}
+                className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                  isNarrating 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {isTtsLoading ? <Loader2 size={14} className="animate-spin" /> : isNarrating ? <Square size={12} fill="currentColor" /> : <Volume2 size={14} />}
+                {isTtsLoading ? 'Synthesis...' : isNarrating ? 'Stop AI' : 'Listen AI'}
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               <button onClick={onToggleBookmark} className={`p-2.5 border rounded-full transition-all duration-300 transform hover:-translate-y-1 ${isBookmarked ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : isDark ? 'border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white' : 'border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900'}`} title={isBookmarked ? "Saved to Bookmarks" : "Save Story"}>
                 <Bookmark size={18} fill={isBookmarked ? "currentColor" : "none"} />

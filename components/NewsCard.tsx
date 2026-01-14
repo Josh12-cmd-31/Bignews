@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Article, UserPreferences } from '../types';
 import { ArrowRight, Clock, Eye, Heart, MessageSquare, ShieldCheck, Bookmark } from 'lucide-react';
@@ -17,6 +16,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ article, onClick, preferences, onUp
   const isDark = preferences.theme === 'dark';
 
   const getPreviewText = (html: string) => {
+    if (!html) return '';
     const text = html.replace(/<[^>]*>?/gm, '');
     return text.length > 150 ? text.substring(0, 150) + "..." : text;
   };
@@ -80,10 +80,10 @@ const NewsCard: React.FC<NewsCardProps> = ({ article, onClick, preferences, onUp
       
       <div className="p-4 sm:p-5 flex-1 flex flex-col">
         <div className={`flex flex-wrap items-center text-xs mb-3 gap-y-1 gap-x-2 text-slate-400`}>
-            <div className="flex items-center gap-1"><Clock size={14} /><span>{new Date(article.publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div>
+            <div className="flex items-center gap-1"><Clock size={14} /><span>{new Date(article.publishedAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div>
         </div>
 
-        <h3 className={`text-lg sm:text-xl font-bold mb-2 font-serif leading-snug transition-colors line-clamp-2 ${isDark ? 'text-slate-100 group-hover:text-blue-400' : 'text-slate-900 group-hover:text-blue-700'}`}>{article.title}</h3>
+        <h3 className={`text-lg sm:text-xl font-bold mb-2 font-serif leading-snug transition-colors line-clamp-2 ${isDark ? 'text-slate-100 group-hover:text-blue-400' : 'text-slate-900 group-hover:text-blue-700'}`}>{article.title || 'Untitled Story'}</h3>
         <p className={`text-sm mb-4 line-clamp-3 flex-1 transition-colors ${isDark ? 'text-slate-400 group-hover:text-slate-300' : 'text-slate-600 group-hover:text-slate-500'}`}>{article.summary}</p>
 
         <div className={`mt-auto pt-4 border-t flex items-center justify-between font-semibold text-sm ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
